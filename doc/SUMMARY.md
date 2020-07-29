@@ -54,6 +54,7 @@
     * [Local Intents](tutorial/nlpRouting.md#local-intents-and-fallbacks-dialogue-context)
     * [Interaction Context](tutorial/nlpRouting.md#processing-an-expected-response-interaction-context)
     * [Bookmarks](tutorial/nlpRouting.md#bookmarks-global-intents-under-control)
+* [Extending the Processor](tutorial/extendingProcessor.md)
 
 ## API
 
@@ -67,7 +68,8 @@
     * [ReceiptTemplate](api/ButtonTemplate.md#ReceiptTemplate)
 * [Utils](api/bufferloader.md)
 * [Ai](api/Ai.md)
-* [Wingbot.ai](api/BuildRouter.md)
+* [Wingbot.ai (BuildRouter)](api/BuildRouter.md)
 * [Notifications](api/Notifications.md)
 * [GraphApi](api/GraphApi.md)
 * [Chatbot API GraphQL schema](api/graphqlSchema.md)
+* [Changelog](CHANGELOG.md)

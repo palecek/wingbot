@@ -7,10 +7,11 @@ const EventEmitter = require('events');
 const { MemoryStateStorage } = require('./tools');
 const Responder = require('./Responder');
 const Request = require('./Request');
+const Ai = require('./Ai');
 const ReturnSender = require('./ReturnSender');
 
 /**
- * @typedef {Object} AutoTypingConfig
+ * @typedef {object} AutoTypingConfig
  * @prop {number} time - duration
  * @prop {number} perCharacters - number of characters
  * @prop {number} minTime - minimum writing time
@@ -18,9 +19,26 @@ const ReturnSender = require('./ReturnSender');
  */
 
 /**
- * @typedef {Object} Plugin
- * @prop {Function} middleware
- * @prop {Function} processMessage
+ * @typedef {object} Plugin
+ * @prop {Function} [processMessage]
+ * @prop {Function} [beforeAiPreload]
+ * @prop {Function} [beforeProcessMessage]
+ * @prop {Function} [afterProcessMessage]
+ */
+
+/**
+ * @typedef {object} IntentAction
+ * @prop {string} action
+ * @prop {Intent} intent
+ * @prop {number} sort
+ * @prop {number} [score]
+ * @prop {boolean} local
+ * @prop {boolean} aboveConfidence
+ * @prop {boolean} [winner]
+ * @prop {object} meta
+ * @prop {string} title
+ * @prop {string} [meta.targetAppId]
+ * @prop {string|null} [meta.targetAction]
  */
 
 const NAME_FROM_STATE = (state) => {
@@ -33,17 +51,16 @@ const NAME_FROM_STATE = (state) => {
     return null;
 };
 
-
 class Processor extends EventEmitter {
 
     /**
      * Creates an instance of Processor
      *
      * @param {ReducerWrapper|Function|Router} reducer
-     * @param {Object} [options] - processor options
+     * @param {object} [options] - processor options
      * @param {string} [options.appUrl] - url basepath for relative links
-     * @param {Object} [options.stateStorage] - chatbot state storage
-     * @param {Object} [options.tokenStorage] - frontend token storage
+     * @param {object} [options.stateStorage] - chatbot state storage
+     * @param {object} [options.tokenStorage] - frontend token storage
      * @param {Function} [options.translator] - text translate function
      * @param {number} [options.timeout] - chat sesstion lock duration (30000)
      * @param {number} [options.justUpdateTimeout] - simple read and write lock (1000)
@@ -52,7 +69,7 @@ class Processor extends EventEmitter {
      * @param {Function} [options.nameFromState] - override the name translator
      * @param {boolean|AutoTypingConfig} [options.autoTyping] - enable or disable automatic typing
      * @param {Function} [options.log] - console like error logger
-     * @param {Object} [options.defaultState] - default chat state
+     * @param {object} [options.defaultState] - default chat state
      * @param {boolean} [options.autoSeen] - send seen automatically
      * @param {boolean} [options.waitsForSender] - use 'false' resolve the processing promise
      *     without waiting for message sender
@@ -67,7 +84,7 @@ class Processor extends EventEmitter {
             appUrl: '',
             stateStorage: new MemoryStateStorage(),
             tokenStorage: null,
-            translator: w => w,
+            translator: (w) => w,
             timeout: 30000,
             waitForLockedState: 12000,
             retriesWhenWaiting: 6,
@@ -106,7 +123,12 @@ class Processor extends EventEmitter {
      */
     plugin (plugin) {
         this._plugins.push(plugin);
-        this._middlewares.push(plugin.middleware());
+        // @ts-ignore
+        if (typeof plugin.middleware === 'function') {
+            this.options.log.warn('Middleware functions in Processor plugins are deprecated');
+            // @ts-ignore
+            this._middlewares.push(plugin.middleware());
+        }
     }
 
     _createPostBack (postbackAcumulator, req, res) {
@@ -141,7 +163,7 @@ class Processor extends EventEmitter {
 
             if (data instanceof Promise) {
                 postbackAcumulator.push(data
-                    .then(result => ({
+                    .then((result) => ({
                         action,
                         data: Object.assign(result || {}, { _localpostback: true })
                     })));
@@ -183,6 +205,18 @@ class Processor extends EventEmitter {
             });
     }
 
+    async _preload () {
+        // @ts-ignore
+        if (this.reducer && typeof this.reducer.preload === 'function') {
+            // @ts-ignore
+            return this.reducer.preload()
+                .catch((e) => this.options.log.error('preload error', e))
+                // mute log errors
+                .catch(() => {});
+        }
+        return Promise.resolve();
+    }
+
     async processMessage (
         message,
         pageId = null,
@@ -193,26 +227,23 @@ class Processor extends EventEmitter {
         ),
         responderData = {}
     ) {
-        // @ts-ignore
-        if (this.reducer && typeof this.reducer.preload === 'function') {
-            // @ts-ignore
-            this.reducer.preload()
-                .catch(e => this.options.log.error('preload error', e))
-                // mute log errors
-                .catch(() => {});
-        }
+        const preloadPromise = this._preload();
 
         try {
             for (const plugin of this._plugins) {
+                if (typeof plugin.processMessage !== 'function') continue;
+
                 const res = await plugin.processMessage(message, pageId, messageSender);
                 if (typeof res !== 'object' || typeof res.status !== 'number') {
                     throw new Error('The plugin should always return the status code');
                 }
                 if (res.status === 200) {
+                    await preloadPromise;
                     return res;
                 }
             }
         } catch (e) {
+            await preloadPromise;
             const { code = 500 } = e;
             this.reportSendError(e, message, pageId);
             return { status: code };
@@ -221,10 +252,13 @@ class Processor extends EventEmitter {
         if (typeof message !== 'object' || message === null
             || !((message.sender && message.sender.id) || message.optin)
             || !(message.message || message.referral || message.optin
+                || typeof message.intent === 'string'
+                || (Array.isArray(message.entities) && message.entities.length !== 0)
                 || message.pass_thread_control || message.postback
                 || message.take_thread_control)) {
 
             this.options.log.warn('message should be an object', message);
+            await preloadPromise;
             return { status: 400 };
         }
 
@@ -232,6 +266,7 @@ class Processor extends EventEmitter {
 
         // ignore messages from the page
         if (pageId === senderId && senderId) {
+            await preloadPromise;
             return { status: 304 };
         }
 
@@ -251,6 +286,7 @@ class Processor extends EventEmitter {
             this.reportSendError(e, message, pageId);
             result = { status: code, error: e.message };
         }
+        await preloadPromise;
         return result;
     }
 
@@ -264,6 +300,61 @@ class Processor extends EventEmitter {
             result = { status: code, error: e.message };
         }
         return result;
+    }
+
+    /**
+     * Get matching NLP intents
+     *
+     * @param {string|object} text
+     * @param {string} [pageId]
+     * @param {boolean} [allowEmptyAction]
+     * @returns {Promise<IntentAction[]>}
+     */
+    async aiActionsForText (text, pageId = 'none', allowEmptyAction = false) {
+        try {
+            // @ts-ignore
+            if (this.reducer && typeof this.reducer.preload === 'function') {
+                // @ts-ignore
+                await this.reducer.preload();
+            }
+
+            const request = typeof text === 'string'
+                ? Request.text('none', text)
+                : text;
+            // @ts-ignore
+            const req = new Request(request, {}, pageId, this.reducer.globalIntents);
+
+            await Ai.ai.preloadIntent(req);
+
+            const actions = req.aiActions();
+
+            if (actions.length === 0 && allowEmptyAction && req.intents.length > 0) {
+                const [intent] = req.intents;
+
+                return [
+                    {
+                        intent,
+                        action: null,
+                        sort: intent.score,
+                        local: false,
+                        aboveConfidence: intent.score >= Ai.ai.confidence,
+                        meta: {},
+                        title: null
+                    }
+                ];
+            }
+
+            return actions
+                .map((a) => ({
+                    ...a,
+                    title: typeof a.title === 'function'
+                        ? a.title(req)
+                        : a.title
+                }));
+        } catch (e) {
+            this.options.log.error('failed to fetch intent actions', e);
+            return [];
+        }
     }
 
     async _processMessage (message, pageId, messageSender, responderData, fromEvent = false) {
@@ -305,7 +396,7 @@ class Processor extends EventEmitter {
             // update state before run
             const modState = await messageSender.modifyStateAfterLoad(stateObject, this);
             if (modState) {
-                const modStateCopy = Object.assign({}, modState);
+                const modStateCopy = { ...modState };
                 if (modStateCopy.state) {
                     Object.assign(stateObject.state, modStateCopy.state);
                     delete modStateCopy.state;
@@ -316,32 +407,80 @@ class Processor extends EventEmitter {
             // prepare request and responder
             let { state } = stateObject;
 
-            req = new Request(message, state, pageId);
+            // @ts-ignore
+            req = new Request(message, state, pageId, this.reducer.globalIntents);
             res = new Responder(senderId, messageSender, token, this.options, responderData);
             const postBack = this._createPostBack(postbackAcumulator, req, res);
 
+            let continueDispatching = true;
+
+            // run plugins
+            for (const plugin of this._plugins) {
+                if (typeof plugin.beforeAiPreload !== 'function') continue;
+
+                let out = plugin.beforeAiPreload(req, res);
+                if (out instanceof Promise) out = await out;
+
+                if (!out) { // end
+                    continueDispatching = false;
+                    break;
+                }
+            }
+
+            await Ai.ai.preloadIntent(req);
+
+            // @deprecated backward compatibility
+            const aByAi = req.actionByAi();
+            if (aByAi && aByAi !== req.action()) {
+                res.setBookmark(aByAi);
+            }
+
+            // process setState
+            const setState = req.getSetState();
+            Object.assign(req.state, setState);
+            res.setState(setState);
+
             // attach sender meta
-            const data = req.action(true);
+            const data = req.actionData();
 
             if (typeof data._senderMeta === 'object') {
                 res._senderMeta = { ...data._senderMeta };
             }
 
-            let continueToReducer = true;
-            // process plugin middlewares
-            for (const middleware of this._middlewares) {
-                let middlewareRes = middleware(req, res, postBack);
-                if (middlewareRes instanceof Promise) {
-                    middlewareRes = await middlewareRes;
-                }
-                if (middlewareRes === null) { // end
-                    continueToReducer = false;
-                    break;
+            if (continueDispatching) {
+                // process plugin middlewares
+                for (const plugin of this._plugins) {
+                    if (typeof plugin.beforeProcessMessage !== 'function') continue;
+
+                    let out = plugin.beforeProcessMessage(req, res);
+                    if (out instanceof Promise) out = await out;
+
+                    if (!out) { // end
+                        continueDispatching = false;
+                        break;
+                    }
                 }
             }
 
-            if (continueToReducer) {
-                if (this.options.autoSeen && (!req.isReferral() || req.action()) && fromEvent) {
+            if (continueDispatching) {
+                // process plugin middlewares
+                for (const middleware of this._middlewares) {
+                    let out = middleware(req, res, postBack);
+                    if (out instanceof Promise) out = await out;
+
+                    if (out === null) { // end
+                        continueDispatching = false;
+                        break;
+                    }
+                }
+            }
+
+            if (continueDispatching) {
+                if (this.options.autoSeen
+                    && res.isResponseType() // do not send seen, if it's a campaign
+                    && (!req.isReferral() || req.action())
+                    && fromEvent) {
+
                     res.seen();
                 }
                 // process the event
@@ -357,6 +496,14 @@ class Processor extends EventEmitter {
 
                 if (fromEvent) {
                     this._emitEvent(req, res);
+                }
+            }
+
+            if (continueDispatching) {
+                for (const plugin of this._plugins) {
+                    if (typeof plugin.afterProcessMessage !== 'function') continue;
+
+                    await Promise.resolve(plugin.afterProcessMessage(req, res));
                 }
             }
 
@@ -418,7 +565,14 @@ class Processor extends EventEmitter {
      */
     _emitEvent (req, res) {
         const { _lastAction: lastAction = null } = req.state;
-        const { _lastAction: act = null } = res.newState;
+        let { _lastAction: act = null } = res.newState;
+        act = act || req.action();
+
+        const shouldNotTrack = res.data._initialEventShouldNotBeTracked === true;
+
+        if (shouldNotTrack) {
+            return;
+        }
 
         const trackingSkill = typeof res.newState._trackAsSkill === 'undefined'
             ? (req.state._trackAsSkill || null)
@@ -432,7 +586,7 @@ class Processor extends EventEmitter {
             lastAction,
             false,
             trackingSkill,
-            res.senderMeta
+            res
         ];
 
         process.nextTick(() => {
@@ -459,24 +613,33 @@ class Processor extends EventEmitter {
     }
 
     _mergeState (previousState, req, res, senderStateUpdate) {
-        const state = Object.assign({}, previousState, res.newState);
+        const state = { ...previousState, ...res.newState };
 
         const isUserEvent = req.isMessage() || req.isPostBack()
-            || req.isReferral() || req.isAttachment();
+            || req.isReferral() || req.isAttachment()
+            || req.isTextOrIntent();
 
         // reset expectations
         if (isUserEvent && !res.newState._expected) {
             state._expected = null;
         }
 
-        // reset expectated keywords
+        // reset expected keywords
         if (isUserEvent && !res.newState._expectedKeywords) {
             state._expectedKeywords = null;
+        }
+
+        // reset expected confident input
+        if (isUserEvent
+            && typeof state._expectedConfidentInput !== 'undefined'
+            && !res.newState._expectedConfidentInput) {
+            state._expectedConfidentInput = false;
         }
 
         if (senderStateUpdate && senderStateUpdate.state) {
             Object.assign(state, senderStateUpdate.state);
         }
+
         return state;
     }
 
@@ -486,13 +649,13 @@ class Processor extends EventEmitter {
         }
 
         return this.tokenStorage.getOrCreateToken(senderId, pageId)
-            .then(token => token.token);
+            .then((token) => token.token);
     }
 
     _loadState (senderId, pageId, lock) {
         if (!senderId) {
             return Promise.resolve({
-                state: Object.assign({}, this.options.defaultState)
+                state: { ...this.options.defaultState }
             });
         }
 
@@ -502,7 +665,14 @@ class Processor extends EventEmitter {
             const onLoad = (res) => {
                 if (!res) {
                     if (retries-- < 0) {
-                        reject(new Error('Loading state timed out: another event is blocking the state'));
+                        this.stateStorage
+                            .getState(senderId, pageId)
+                            .then((state) => {
+                                this.options.log.warn(`Locked state: ${senderId}, lock: ${lock}, at ${Date.now()}`, state);
+                            })
+                            .catch(() => {});
+
+                        reject(new Error(`Loading state timed out: another event is blocking it (${senderId}, lock: ${lock})`));
                         return;
                     }
 
@@ -520,14 +690,30 @@ class Processor extends EventEmitter {
 
     _wait () {
         const wait = Math.round(this.options.waitForLockedState / this.options.retriesWhenWaiting);
-        return new Promise(r => setTimeout(() => r(null), wait));
+        return new Promise((r) => setTimeout(() => r(null), wait));
     }
 
     _model (senderId, pageId, timeout, retries) {
         const { defaultState } = this.options;
+
+        const now = Date.now();
+        const warnIfItTookTooLong = (r = null) => {
+            const duration = Date.now() - now;
+            if (duration >= (this.options.waitForLockedState / 2)) {
+                try {
+                    this.options.log.warn(`Loading state (${senderId}) for timeout ${timeout} took too long (${duration}ms).`);
+                } catch (e) {
+                    // noop
+                }
+            }
+            return r;
+        };
+
         return this.stateStorage
             .getOrCreateAndLock(senderId, pageId, defaultState, timeout)
+            .then(warnIfItTookTooLong)
             .catch((err) => {
+                warnIfItTookTooLong();
                 if (!err || err.code !== 11000) {
                     this.options.log.error('Bot processor load error', err);
                 }

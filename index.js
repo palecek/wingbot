@@ -17,7 +17,6 @@ const { asserts } = require('./src/testTools');
 const BuildRouter = require('./src/BuildRouter');
 const ReturnSender = require('./src/ReturnSender');
 const Plugins = require('./src/Plugins');
-const { callbackMiddleware, sustainCallback } = require('./src/middlewares/callback');
 const NotificationsStorage = require('./src/notifications/NotificationsStorage');
 const Notifications = require('./src/notifications/Notifications');
 const MemoryBotConfigStorage = require('./src/tools/MemoryBotConfigStorage');
@@ -34,7 +33,7 @@ const GenericTemplate = require('./src/templates/GenericTemplate');
 const BaseTemplate = require('./src/templates/BaseTemplate');
 const { parseActionPayload } = require('./src/utils/pathUtils');
 const { disambiguationQuickReply } = require('./src/utils/quickReplies');
-const getUpdate = require('./src/utils/getUpdate');
+const { getUpdate, getValue } = require('./src/utils/getUpdate');
 const {
     bufferloader,
     MemoryStateStorage,
@@ -61,19 +60,14 @@ module.exports = {
     CachedModel,
     parseActionPayload,
     getUpdate,
+    getValue,
     disambiguationQuickReply,
 
     // Wingbot
     ai: Ai.ai,
     Plugins,
     BuildRouter,
-    // @deprecated
-    validateBot: validateBotApi,
     WingbotModel,
-
-    // middlewares
-    callbackMiddleware,
-    sustainCallback,
 
     // Notifications
     Notifications,

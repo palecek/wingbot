@@ -1,0 +1,1222 @@
+
+<!DOCTYPE HTML>
+<html lang="" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>Extending the Processor · Wingbot</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.3">
+        <meta name="author" content="wingbot.ai">
+        
+        
+    
+    <link rel="stylesheet" href="../gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-anchors/plugin.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-highlight/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-search/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="../gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="../gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    <link rel="next" href="../api/Request.html" />
+    
+    
+    <link rel="prev" href="nlpRouting.html" />
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="Type to search" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        <li class="header">Building a chatbot with designer</li>
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="../">
+            
+                <a href="../">
+            
+                    
+                    Getting Started
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2" data-path="../designerBot/deployingBot.html">
+            
+                <a href="../designerBot/deployingBot.html">
+            
+                    
+                    Deploying a bot application
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.2.1" data-path="../designerBot/deployingBot.html">
+            
+                <a href="../designerBot/deployingBot.html#principle">
+            
+                    
+                    Principle
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.2" data-path="../designerBot/deployingBot.html">
+            
+                <a href="../designerBot/deployingBot.html#starting-a-new-chatbot-project">
+            
+                    
+                    Starting a new project
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.3" data-path="../designerBot/deployingBot.html">
+            
+                <a href="../designerBot/deployingBot.html#wingbot-project-structure">
+            
+                    
+                    Wingbot project structure
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="../designerBot/scripting.html">
+            
+                <a href="../designerBot/scripting.html">
+            
+                    
+                    Scripting: Snippets and conditions
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.3.1" data-path="../designerBot/scripting.html">
+            
+                <a href="../designerBot/scripting.html#snippet-concept">
+            
+                    
+                    Snippet concept
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3.2" data-path="../designerBot/scripting.html">
+            
+                <a href="../designerBot/scripting.html#conversation-state-and-data">
+            
+                    
+                    Conversation state and data
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3.3" data-path="../designerBot/scripting.html">
+            
+                <a href="../designerBot/scripting.html#using-data-in-designer">
+            
+                    
+                    Using data in designer
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3.4" data-path="../designerBot/scripting.html">
+            
+                <a href="../designerBot/scripting.html#loading-data-from-apis">
+            
+                    
+                    Loading data from APIs
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4" data-path="../designerBot/plugins.html">
+            
+                <a href="../designerBot/plugins.html">
+            
+                    
+                    Plugins
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5" data-path="testing.html">
+            
+                <a href="testing.html">
+            
+                    
+                    Testing
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.6" data-path="analytics.html">
+            
+                <a href="analytics.html">
+            
+                    
+                    Analytics
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.7" data-path="chatbotApi.html">
+            
+                <a href="chatbotApi.html">
+            
+                    
+                    Chatbot API
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+        
+        <li class="header">Understanding the core</li>
+        
+        
+    
+        <li class="chapter " data-level="2.1" data-path="architecture.html">
+            
+                <a href="architecture.html">
+            
+                    
+                    Architecture and modules
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="2.1.1" data-path="architecture.html">
+            
+                <a href="architecture.html#messaging-channels">
+            
+                    
+                    Messaging channels
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.1.2" data-path="architecture.html">
+            
+                <a href="architecture.html#conversational-interface">
+            
+                    
+                    Conversational interface
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.1.3" data-path="architecture.html">
+            
+                <a href="architecture.html#modules-services">
+            
+                    
+                    Modules
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.1.4" data-path="architecture.html">
+            
+                <a href="architecture.html#graphql-api">
+            
+                    
+                    GraphQL API
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="2.2" data-path="buildingConversation.html">
+            
+                <a href="buildingConversation.html">
+            
+                    
+                    Building a Bot programmatically
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="2.2.1" data-path="buildingConversation.html">
+            
+                <a href="buildingConversation.html#asking-a-question">
+            
+                    
+                    Asking a question
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.2.2" data-path="buildingConversation.html">
+            
+                <a href="buildingConversation.html#using-quick-replies-for-controlling-conversation">
+            
+                    
+                    Using quick replies
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.2.3" data-path="buildingConversation.html">
+            
+                <a href="buildingConversation.html#post-back-is-also-an-action">
+            
+                    
+                    Postbacks
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="2.3" data-path="conversationState.html">
+            
+                <a href="conversationState.html">
+            
+                    
+                    Conversation State
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="2.3.1" data-path="conversationState.html">
+            
+                <a href="conversationState.html#using-the-state-in-navigation">
+            
+                    
+                    Using state in navigation
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.3.2" data-path="conversationState.html">
+            
+                <a href="conversationState.html#reading-and-modifiing-user-state">
+            
+                    
+                    Reading and writing state
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="2.4" data-path="asyncActions.html">
+            
+                <a href="asyncActions.html">
+            
+                    
+                    Asynchronous Actions
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="2.4.1" data-path="asyncActions.html">
+            
+                <a href="asyncActions.html#blocking-asynchronous-actions">
+            
+                    
+                    Blocking Actions
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.4.2" data-path="asyncActions.html">
+            
+                <a href="asyncActions.html#non-blocking-asynchronous-actions">
+            
+                    
+                    Non Blocking Actions
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.4.3" data-path="asyncActions.html">
+            
+                <a href="asyncActions.html#loading-attachments-to-buffer">
+            
+                    
+                    Loading Attachments
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="2.5" data-path="advancedRouting.html">
+            
+                <a href="advancedRouting.html">
+            
+                    
+                    Advanced Routing
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="2.5.1" data-path="advancedRouting.html">
+            
+                <a href="advancedRouting.html#resolving-actions">
+            
+                    
+                    Resolving Actions
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.5.2" data-path="advancedRouting.html">
+            
+                <a href="advancedRouting.html#simple-text-actions">
+            
+                    
+                    Text Actions
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.5.3" data-path="advancedRouting.html">
+            
+                <a href="advancedRouting.html#integrating-with-ai-prediction">
+            
+                    
+                    Integrating AI
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.5.4" data-path="advancedRouting.html">
+            
+                <a href="advancedRouting.html#redirecting-flow-with-post-back">
+            
+                    
+                    Redirecting with Postback
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="2.6" data-path="nestingRouters.html">
+            
+                <a href="nestingRouters.html">
+            
+                    
+                    Nesting - Reusable Blocks
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="2.6.1" data-path="nestingRouters.html">
+            
+                <a href="nestingRouters.html#basic-concept">
+            
+                    
+                    Concept
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.6.2" data-path="nestingRouters.html">
+            
+                <a href="nestingRouters.html#example">
+            
+                    
+                    Example
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="2.7" data-path="templates.html">
+            
+                <a href="templates.html">
+            
+                    
+                    Sending Templates
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="2.7.1" data-path="templates.html">
+            
+                <a href="templates.html#button-template">
+            
+                    
+                    Button Template
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.7.2" data-path="templates.html">
+            
+                <a href="templates.html#generic-template">
+            
+                    
+                    Generic Template
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.7.3" data-path="templates.html">
+            
+                <a href="templates.html#receipt-template">
+            
+                    
+                    Receipt Template
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.7.4" data-path="templates.html">
+            
+                <a href="templates.html#working-with-webviews">
+            
+                    
+                    Webviews
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="2.8" data-path="nlpRouting.html">
+            
+                <a href="nlpRouting.html">
+            
+                    
+                    Intents, entities and fallbacks
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="2.8.1" data-path="nlpRouting.html">
+            
+                <a href="nlpRouting.html#defining-entities">
+            
+                    
+                    Entities
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.8.2" data-path="nlpRouting.html">
+            
+                <a href="nlpRouting.html#global-intents-and-fallbacks">
+            
+                    
+                    Global Intents
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.8.3" data-path="nlpRouting.html">
+            
+                <a href="nlpRouting.html#local-intents-and-fallbacks-dialogue-context">
+            
+                    
+                    Local Intents
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.8.4" data-path="nlpRouting.html">
+            
+                <a href="nlpRouting.html#processing-an-expected-response-interaction-context">
+            
+                    
+                    Interaction Context
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.8.5" data-path="nlpRouting.html">
+            
+                <a href="nlpRouting.html#bookmarks-global-intents-under-control">
+            
+                    
+                    Bookmarks
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter active" data-level="2.9" data-path="extendingProcessor.html">
+            
+                <a href="extendingProcessor.html">
+            
+                    
+                    Extending the Processor
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+        
+        <li class="header">API</li>
+        
+        
+    
+        <li class="chapter " data-level="3.1" data-path="../api/Request.html">
+            
+                <a href="../api/Request.html">
+            
+                    
+                    Request
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="3.2" data-path="../api/Responder.html">
+            
+                <a href="../api/Responder.html">
+            
+                    
+                    Responder
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="3.3" data-path="../api/Router.html">
+            
+                <a href="../api/Router.html">
+            
+                    
+                    Router
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="3.4" data-path="../api/Tester.html">
+            
+                <a href="../api/Tester.html">
+            
+                    
+                    Tester
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="3.5" data-path="../api/ButtonTemplate.html">
+            
+                <a href="../api/ButtonTemplate.html">
+            
+                    
+                    Template Builders
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="3.5.1" data-path="../api/ButtonTemplate.html">
+            
+                <a href="../api/ButtonTemplate.html#ButtonTemplate">
+            
+                    
+                    ButtonTemplate
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="3.5.2" data-path="../api/ButtonTemplate.html">
+            
+                <a href="../api/ButtonTemplate.html#GenericTemplate">
+            
+                    
+                    GenericTemplate
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="3.5.3" data-path="../api/ButtonTemplate.html">
+            
+                <a href="../api/ButtonTemplate.html#ReceiptTemplate">
+            
+                    
+                    ReceiptTemplate
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="3.6" data-path="../api/bufferloader.html">
+            
+                <a href="../api/bufferloader.html">
+            
+                    
+                    Utils
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="3.7" data-path="../api/Ai.html">
+            
+                <a href="../api/Ai.html">
+            
+                    
+                    Ai
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="3.8" data-path="../api/BuildRouter.html">
+            
+                <a href="../api/BuildRouter.html">
+            
+                    
+                    Wingbot.ai (BuildRouter)
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="3.9" data-path="../api/Notifications.html">
+            
+                <a href="../api/Notifications.html">
+            
+                    
+                    Notifications
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="3.10" data-path="../api/GraphApi.html">
+            
+                <a href="../api/GraphApi.html">
+            
+                    
+                    GraphApi
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="3.11" data-path="../api/graphqlSchema.html">
+            
+                <a href="../api/graphqlSchema.html">
+            
+                    
+                    Chatbot API GraphQL schema
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="3.12" data-path="../CHANGELOG.html">
+            
+                <a href="../CHANGELOG.html">
+            
+                    
+                    Changelog
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            Published with GitBook
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href=".." >Extending the Processor</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <h1 id="extenting-the-wingbots-abilities-using-processor-plugin"><a name="extenting-the-wingbots-abilities-using-processor-plugin" class="plugin-anchor" href="#extenting-the-wingbots-abilities-using-processor-plugin"><i class="fa fa-link" aria-hidden="true"></i></a>Extenting the wingbot&apos;s abilities using Processor plugin</h1>
+<p>To be able to:</p>
+<ul>
+<li>add methods to <code>Request</code> or <code>Responder</code></li>
+<li>modify state before save</li>
+</ul>
+<p>you can use a Processor plugin</p>
+<h2 id="processor-plugin"><a name="processor-plugin" class="plugin-anchor" href="#processor-plugin"><i class="fa fa-link" aria-hidden="true"></i></a>Processor plugin</h2>
+<p>Processor plugin has following interface and <strong>all functions can be async or not.</strong></p>
+<ul>
+<li><p><strong>#processMessage(message, pageId, messageSender)</strong></p>
+<p>  Called immediately after the messaging event arrives to Processor. Has following signature:</p>
+<ul>
+<li><code>message: object</code> - the messaging event object</li>
+<li><code>pageId: string</code> - id of page (channel), where the event occured</li>
+<li><code>messageSender: Sender</code> - an instance of Sender class, which allows to send responses</li>
+<li><strong>returns:</strong> <code>{status:number}</code> - status 200 will stop the dispatching and will be returned</li>
+</ul>
+</li>
+<li><p><strong>#beforeAiPreload(req, res): boolean</strong></p>
+<p>  Called immediately after loading the state and before the intent or entities are attached and also before the &quot;setState&quot; from quick replies is processed.</p>
+<p>  Returning <code>false</code> stops the dispatching.</p>
+</li>
+<li><p><strong>#beforeProcessMessage(req, res): boolean</strong></p>
+<p>  Called just before passing a message through bot.</p>
+<p>  Returning <code>false</code> stops the dispatching.</p>
+</li>
+<li><p><strong>#afterProcessMessage(req, res)</strong></p>
+<p>  Called after the bot completes dispatching an event. Allows to modify state before it&apos;ll be stored.</p>
+</li>
+</ul>
+<h2 id="using-the-plugin"><a name="using-the-plugin" class="plugin-anchor" href="#using-the-plugin"><i class="fa fa-link" aria-hidden="true"></i></a>Using the plugin</h2>
+<p>This example shows how to implement own state property and it&apos;s setter, so the data will be persisted.</p>
+<pre><code class="lang-javascript">
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MySpecialStatePlugin</span> </span>{
+
+    beforeProcessMessage (req, res) {
+        <span class="hljs-built_in">Object</span>.assign(req, {
+            mySpecialState: req.state._mySpecState
+        });
+        <span class="hljs-built_in">Object</span>.assign(res, {
+            _updateMySpecialState: {},
+            setMySpecialState (data) {
+                <span class="hljs-built_in">Object</span>.assign(<span class="hljs-keyword">this</span>._updateMySpecialState, data);
+            }
+        })
+    }
+
+    afterProcessMessage (req, res) {
+        res.setState({
+            _mySpecState: {
+                ...req.mySpecialState,
+                ...res._updateMySpecialState
+            }
+        });
+    }
+
+}
+
+<span class="hljs-comment">// using the plugin</span>
+<span class="hljs-keyword">const</span> bot = <span class="hljs-keyword">new</span> Router();
+
+bot.use(<span class="hljs-string">&apos;start&apos;</span>, (req, res) =&gt; {
+    res.setMySpecialState({ visitedStart: <span class="hljs-literal">true</span> });
+});
+
+<span class="hljs-comment">// register the plugin in processor</span>
+<span class="hljs-keyword">const</span> processor = <span class="hljs-keyword">new</span> Processor(bot);
+
+processor.plugin(<span class="hljs-keyword">new</span> MySpecialStatePlugin());
+</code></pre>
+
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="nlpRouting.html#bookmarks-global-intents-under-control" class="navigation navigation-prev " aria-label="Previous page: Bookmarks">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+                <a href="../api/Request.html" class="navigation navigation-next " aria-label="Next page: Request">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"Extending the Processor","level":"2.9","depth":1,"next":{"title":"Request","level":"3.1","depth":1,"path":"api/Request.md","ref":"api/Request.md","articles":[]},"previous":{"title":"Bookmarks","level":"2.8.5","depth":2,"anchor":"#bookmarks-global-intents-under-control","path":"tutorial/nlpRouting.md","ref":"tutorial/nlpRouting.md#bookmarks-global-intents-under-control","articles":[]},"dir":"ltr"},"config":{"plugins":["theme-default","collapsible-menu","anchors"],"styles":{"ebook":"styles/ebook.css","epub":"styles/epub.css","mobi":"styles/mobi.css","pdf":"styles/pdf.css","print":"styles/print.css","website":"styles/website.css"},"pluginsConfig":{"collapsible-menu":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"fontsettings":{"theme":"white","family":"sans","size":2},"highlight":{},"theme-api":{"theme":"dark","languages":[{"lang":"js","name":"JavaScript","default":true}]},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"theme-default":{"showLevel":false,"styles":{"ebook":"styles/ebook.css","epub":"styles/epub.css","mobi":"styles/mobi.css","pdf":"styles/pdf.css","print":"styles/print.css","website":"styles/website.css"}},"anchors":{}},"theme":"default","author":"wingbot.ai","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{"twitter":"https://twitter.com/wingbotai"},"title":"Wingbot","gitbook":"*","description":"Facebook Messenger framework for Node.js"},"file":{"path":"tutorial/extendingProcessor.md","mtime":"2020-03-09T13:08:58.403Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2020-06-25T15:30:22.460Z"},"basePath":"..","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="../gitbook/gitbook.js"></script>
+    <script src="../gitbook/theme.js"></script>
+    
+        
+        <script src="../gitbook/gitbook-plugin-collapsible-menu/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search/search-engine.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search/search.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-lunr/lunr.min.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-lunr/search-lunr.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-sharing/buttons.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+
+    </body>
+</html>
+

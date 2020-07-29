@@ -4,14 +4,17 @@
 'use strict';
 
 const requestNative = require('request-promise-native');
+const path = require('path');
 const Router = require('./Router');
 const Ai = require('./Ai');
 const expected = require('./resolvers/expected');
 const { cachedTranslatedCompilator, stateData } = require('./resolvers/utils');
 const defaultResourceMap = require('./defaultResourceMap');
 
+const MESSAGE_RESOLVER_NAME = 'botbuild.message';
+
 /**
- * @typedef {Object} ConfigStorage
+ * @typedef {object} ConfigStorage
  * @prop {{():Promise}} invalidateConfig
  * @prop {{():Promise<number>}} getConfigTimestamp
  * @prop {{(config:Object):Promise<Object>}} updateConfig
@@ -29,30 +32,28 @@ class BuildRouter extends Router {
      * Create new router from configuration
      *
      * @constructor
-     * @param {Object} block
+     * @param {object} block
      * @param {string} [block.botId] - the ID of bot
      * @param {string} [block.snapshot] - snapshot stage of bot
      * @param {string|Promise<string>} [block.token] - authorization token for bot
-     * @param {Object} [block.routes] - list of routes for direct bot build
      * @param {string} [block.url] - specify alternative configuration resource
      * @param {Plugins} plugins - custom code blocks resource
-     * @param {Object} context - the building context
-     * @param {Object} [context.linksTranslator] - function, that translates links globally
+     * @param {object} context - the building context
+     * @param {object} [context.linksTranslator] - function, that translates links globally
      * @param {ConfigStorage} [context.configStorage] - function, that translates links globally
      * @param {boolean} [context.allowForbiddenSnippetWords] - disable security rule
      * @param {Function} [request] - the building context
      * @example
      *
-     * // usage under serverless environment
+     * // usage of plugins
      *
-     * const { Settings, BuildRouter, Blocks } = require('wingbot');
-     * const { createHandler, createProcessor } = require(''wingbot/serverlessAWS');
+     * const { BuildRouter, Plugins } = require('wingbot');
      * const dynamoDb = require('./lib/dynamodb');
      * const config = require('./config');
      *
-     * const blocks = new Blocks();
+     * const plugins = new Plugins();
      *
-     * blocks.code('exampleBlock', async (req, res, postBack, context, params) => {
+     * plugins.register('exampleBlock', async (req, res, postBack) => {
      *     await res.run('responseBlockName');
      * });
      *
@@ -60,27 +61,9 @@ class BuildRouter extends Router {
      *     botId: 'b7a71c27-c295-4ab0-b64e-6835b50a0db0',
      *     snapshot: 'master',
      *     token: 'adjsadlkadjj92n9u9'
-     * }, blocks);
+     * }, plugins);
      *
-     * const processor = createProcessor(bot, {
-     *     appUrl: config.pageUrl,
-     *     pageToken: config.facebook.pageToken,
-     *     appSecret: config.facebook.appSecret,
-     *     autoTyping: true,
-     *     dynamo: {
-     *         db: dynamoDb,
-     *         tablePrefix: `${config.prefix}-`
-     *     }
-     * });
-     *
-     * const settings = new Settings(config.facebook.pageToken, log);
-     *
-     * if (config.isProduction) {
-     *     settings.getStartedButton('/start');
-     *     settings.whitelistDomain(config.pageUrl);
-     * }
-     *
-     * module.exports.handleRequest = createHandler(processor, config.facebook.botToken);
+     * module.exports = bot;
      */
     constructor (block, plugins, context = {}, request = requestNative) {
         super();
@@ -122,7 +105,7 @@ class BuildRouter extends Router {
          *
          * @prop {number}
          */
-        this.keepConfigFor = 10000;
+        this.keepConfigFor = 60000;
 
         if (typeof block.routes === 'object') {
             this._buildBot(block);
@@ -141,6 +124,11 @@ class BuildRouter extends Router {
             this._botLoaded = this._checkForBotUpdate()
                 .then(() => {
                     this._botLoaded = null;
+                })
+                .catch((e) => {
+                    // be able to try in again later
+                    this._botLoaded = null;
+                    throw e;
                 });
         }
 
@@ -162,7 +150,7 @@ class BuildRouter extends Router {
         } finally {
             if (runningRequest) {
                 this._runningReqs = this._runningReqs
-                    .filter(rr => rr !== runningRequest);
+                    .filter((rr) => rr !== runningRequest);
             }
         }
     }
@@ -175,8 +163,22 @@ class BuildRouter extends Router {
 
         if (!this._configStorage) {
             // not need to wait for existing requests, there are no existing ones
-            const snapshot = await this.loadBot();
-            this.buildWithSnapshot(snapshot.blocks);
+
+            let botLoaded = false;
+            try {
+                const snapshot = await this.loadBot();
+                botLoaded = true;
+                this.buildWithSnapshot(snapshot.blocks);
+            } catch (e) {
+                if (this._configTs > 0 && !botLoaded) {
+                    // mute
+                    // eslint-disable-next-line no-console
+                    console.info('loading new state failed - nothing has ben broken', e);
+                } else {
+                    throw e;
+                }
+            }
+
             return;
         }
         try {
@@ -214,7 +216,7 @@ class BuildRouter extends Router {
     /**
      * Loads conversation configuration
      *
-     * @returns {Promise<Object>}
+     * @returns {Promise<object>}
      */
     async loadBot () {
         const req = {
@@ -241,7 +243,7 @@ class BuildRouter extends Router {
     buildWithSnapshot (blocks, setConfigTimestamp = Number.MAX_SAFE_INTEGER) {
         Object.assign(this._context, { blocks });
 
-        const rootBlock = blocks.find(block => block.isRoot);
+        const rootBlock = blocks.find((block) => block.isRoot);
 
         this._buildBot(rootBlock, setConfigTimestamp);
     }
@@ -262,6 +264,7 @@ class BuildRouter extends Router {
         } else {
             this.globalIntents = new Map(this._prebuiltGlobalIntents);
         }
+
         if (this._prebuiltRoutesCount === null) {
             this._prebuiltRoutesCount = this._routes.length;
         } else {
@@ -272,9 +275,9 @@ class BuildRouter extends Router {
             blockName, blockType, isRoot, staticBlockId
         } = block;
 
-        this._context = Object.assign({}, this._context, {
-            blockName, blockType, isRoot, staticBlockId, BuildRouter
-        });
+        this._context = {
+            ...this._context, blockName, blockType, isRoot, staticBlockId, BuildRouter
+        };
 
         this._linksMap = this._createLinksMap(block);
 
@@ -303,10 +306,10 @@ class BuildRouter extends Router {
                 return;
             }
 
-            const path = `${referredRoutePath}_responder`
+            const expectedPath = `${referredRoutePath}_responder`
                 .replace(/^\//, '');
 
-            Object.assign(route, { path });
+            Object.assign(route, { path: expectedPath });
 
             // set expectedPath to referredRoute
 
@@ -315,15 +318,48 @@ class BuildRouter extends Router {
             }
             set.add(route.respondsToRouteId);
 
-            const referredRoute = routes.find(r => r.id === route.respondsToRouteId);
+            const referredRoute = routes.find((r) => r.id === route.respondsToRouteId);
 
-            Object.assign(referredRoute, { expectedPath: path });
+            Object.assign(referredRoute, { expectedPath });
         });
+    }
+
+    _createLinksMap (block) {
+        const linksMap = new Map();
+
+        block.routes
+            .filter((route) => !route.isResponder)
+            .forEach((route) => linksMap.set(route.id, route.path));
+
+        const { linksMap: prevLinksMap } = this._context;
+
+        if (prevLinksMap) {
+            for (const [from, to] of prevLinksMap.entries()) {
+                if (!linksMap.has(from)) {
+
+                    (path.posix || path).join('..', to);
+
+                    linksMap.set(from, (path.posix || path).join('..', to));
+                }
+            }
+        }
+
+        block.routes.forEach((route) => {
+            let resolver;
+            for (resolver of route.resolvers) {
+                if (resolver.type !== 'botbuild.include') {
+                    continue;
+                }
+                this._findEntryPointsInResolver(linksMap, resolver, route, this._context);
+            }
+        });
+
+        return linksMap;
     }
 
     _findEntryPointsInResolver (linksMap, resolver, route, context) {
         const includedBlock = context.blocks
-            .find(b => b.staticBlockId === resolver.params.staticBlockId);
+            .find((b) => b.staticBlockId === resolver.params.staticBlockId);
 
         if (!includedBlock) {
             return;
@@ -340,28 +376,8 @@ class BuildRouter extends Router {
                 return;
             }
 
-            linksMap.set(`${route.id}/${blockRoute.id}`, `${basePath}${blockRoute.path}`);
+            linksMap.set(`${blockRoute.id}`, `${basePath}${blockRoute.path}`);
         });
-    }
-
-    _createLinksMap (block) {
-        const linksMap = new Map();
-
-        block.routes
-            .filter(route => !route.isResponder)
-            .forEach(route => linksMap.set(route.id, route.path));
-
-        block.routes.forEach((route) => {
-            let resolver;
-            for (resolver of route.resolvers) {
-                if (resolver.type !== 'botbuild.include') {
-                    continue;
-                }
-                this._findEntryPointsInResolver(linksMap, resolver, route, this._context);
-            }
-        });
-
-        return linksMap;
     }
 
     _buildRouteHead (route) {
@@ -382,18 +398,18 @@ class BuildRouter extends Router {
                 }
 
                 if (route.aiGlobal) {
-                    aiResolver = Ai.ai.globalMatch(route.aiTags, aiTitle);
+                    aiResolver = Ai.ai.global(route.path, route.aiTags, aiTitle);
                 } else if (route.isResponder) {
                     aiResolver = Ai.ai.match(route.aiTags);
                 } else {
-                    aiResolver = Ai.ai.localMatch(route.aiTags, aiTitle);
+                    aiResolver = Ai.ai.local(route.path, route.aiTags, aiTitle);
                 }
             }
 
             if (aiResolver && route.isResponder) {
                 resolvers.push(route.path, aiResolver);
             } else if (aiResolver) {
-                resolvers.push([route.path, aiResolver]);
+                resolvers.push(aiResolver);
             } else if (route.path) {
                 resolvers.push(route.path);
             }
@@ -408,55 +424,43 @@ class BuildRouter extends Router {
 
     _buildRoutes (routes) {
         routes.forEach((route) => {
-            const register = this.use(...[
+            this.use(...[
                 ...this._buildRouteHead(route),
                 ...this.buildResolvers(route.resolvers, route)
             ]);
-            this._attachExitPoints(register, route.resolvers);
         });
     }
 
-    _attachExitPoints (register, routeResolvers) {
-        routeResolvers.forEach((resolver) => {
-            if (resolver.type !== 'botbuild.include') {
-                return;
+    _lastMessageIndex (resolvers) {
+        for (let i = resolvers.length - 1; i >= 0; i--) {
+            if (resolvers[i].type === MESSAGE_RESOLVER_NAME) {
+                return i;
             }
-
-            Object.keys(resolver.params.items)
-                .forEach((exitName) => {
-                    const { resolvers } = resolver.params.items[exitName];
-                    register.onExit(exitName, this._buildExitPointResolver(resolvers));
-                });
-        });
-    }
-
-    _buildExitPointResolver (resolvers) {
-        const builtResolvers = this.buildResolvers(resolvers);
-        const reducers = this.createReducersArray(builtResolvers);
-        return (data, req, res, postBack) => {
-            const { path } = res;
-            const action = req.action();
-            return this.processReducers(reducers, req, res, postBack, path, action, true);
-        };
+        }
+        return -1;
     }
 
     buildResolvers (resolvers, route = {}) {
-        const lastIndex = resolvers.length - 1;
-
         const {
-            path, isFallback, isResponder, expectedPath
+            path: ctxPath, isFallback, isResponder, expectedPath, id
         } = route;
 
+        const lastMessageIndex = this._lastMessageIndex(resolvers);
+        const lastIndex = resolvers.length - 1;
+
         return resolvers.map((resolver, i) => {
-            const context = Object.assign({}, this._context, {
+            const context = {
+                ...this._context,
                 isLastIndex: lastIndex === i,
+                isLastMessage: lastMessageIndex === i,
                 router: this,
                 linksMap: this._linksMap,
-                path,
+                path: ctxPath,
                 isFallback,
                 isResponder,
-                expectedPath
-            });
+                expectedPath,
+                routeId: id
+            };
 
             return this._resolverFactory(resolver, context);
         });
@@ -477,15 +481,15 @@ class BuildRouter extends Router {
 }
 
 /**
- * @param {Object[]} blocks - blocks list
+ * @param {object[]} blocks - blocks list
  * @param {Plugins} plugins
- * @param {Object} [context]
+ * @param {object} [context]
  */
 BuildRouter.fromData = function fromData (blocks, plugins, context = {}) {
 
-    const rootBlock = blocks.find(block => block.isRoot);
+    const rootBlock = blocks.find((block) => block.isRoot);
 
-    return new BuildRouter(rootBlock, plugins, Object.assign({ blocks }, context));
+    return new BuildRouter(rootBlock, plugins, ({ blocks, ...context }));
 };
 
 module.exports = BuildRouter;

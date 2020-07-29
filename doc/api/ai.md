@@ -16,40 +16,44 @@
 ## Typedefs
 
 <dl>
-<dt><a href="#EntityExpression">EntityExpression</a> : <code>Object</code></dt>
+<dt><a href="#EntityExpression">EntityExpression</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#textFilter">textFilter</a> ⇒ <code>string</code></dt>
 <dd><p>Text filter function</p>
 </dd>
 <dt><a href="#IntentRule">IntentRule</a> : <code>string</code> | <code><a href="#EntityExpression">EntityExpression</a></code></dt>
 <dd></dd>
-<dt><a href="#Entity">Entity</a> : <code>Object</code></dt>
+<dt><a href="#BotPath">BotPath</a> : <code>object</code></dt>
 <dd></dd>
-<dt><a href="#Intent">Intent</a> : <code>Object</code></dt>
+<dt><a href="#IntentAction">IntentAction</a> : <code>object</code></dt>
 <dd></dd>
-<dt><a href="#Result">Result</a> : <code>Object</code></dt>
+<dt><a href="#Entity">Entity</a> : <code>object</code></dt>
 <dd></dd>
-<dt><a href="#Entity">Entity</a> : <code>Object</code></dt>
+<dt><a href="#Intent">Intent</a> : <code>object</code></dt>
 <dd></dd>
-<dt><a href="#Intent">Intent</a> : <code>Object</code></dt>
+<dt><a href="#Result">Result</a> : <code>object</code></dt>
 <dd></dd>
-<dt><a href="#Result">Result</a> : <code>Object</code></dt>
+<dt><a href="#Entity">Entity</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#Intent">Intent</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#Result">Result</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#Compare">Compare</a> : <code>string</code></dt>
 <dd></dd>
-<dt><a href="#Entity">Entity</a> : <code>Object</code></dt>
+<dt><a href="#Entity">Entity</a> : <code>object</code></dt>
 <dd></dd>
-<dt><a href="#Intent">Intent</a> : <code>Object</code></dt>
+<dt><a href="#Intent">Intent</a> : <code>object</code></dt>
 <dd></dd>
-<dt><a href="#EntityExpression">EntityExpression</a> : <code>Object</code></dt>
+<dt><a href="#EntityExpression">EntityExpression</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#IntentRule">IntentRule</a> : <code>string</code> | <code><a href="#EntityExpression">EntityExpression</a></code></dt>
 <dd></dd>
-<dt><a href="#RegexpComparator">RegexpComparator</a> : <code>Object</code></dt>
+<dt><a href="#RegexpComparator">RegexpComparator</a> : <code>object</code></dt>
 <dd></dd>
-<dt><a href="#PreprocessorOutput">PreprocessorOutput</a> : <code>Object</code></dt>
+<dt><a href="#PreprocessorOutput">PreprocessorOutput</a> : <code>object</code></dt>
 <dd></dd>
-<dt><a href="#AIRequest">AIRequest</a> : <code>Object</code></dt>
+<dt><a href="#AIRequest">AIRequest</a> : <code>object</code></dt>
 <dd></dd>
 </dl>
 
@@ -61,17 +65,16 @@
 * [Ai](#Ai)
     * [.confidence](#Ai_confidence) : <code>number</code>
     * [.threshold](#Ai_threshold) : <code>number</code>
-    * [.logger](#Ai_logger) : <code>Object</code>
-    * [.disableBookmarking](#Ai_disableBookmarking) : <code>boolean</code>
+    * [.logger](#Ai_logger) : <code>object</code>
     * [.matcher](#Ai_matcher) : [<code>AiMatching</code>](#AiMatching)
     * [.getPrefix(prefix, req)](#Ai_getPrefix)
     * [.textFilter(text)](#Ai_textFilter) : [<code>textFilter</code>](#textFilter)
     * [.mockIntent([intent], [score])](#Ai_mockIntent) ⇒ <code>this</code>
     * [.register(model, prefix)](#Ai_register) ⇒ [<code>WingbotModel</code>](#WingbotModel) \| <code>T</code>
-    * [.load()](#Ai_load)
-    * [.match(intent, [confidence])](#Ai_match) ⇒ <code>function</code>
-    * [.localMatch(intent, [title], [confidence])](#Ai_localMatch) ⇒ <code>function</code>
-    * [.globalMatch(intent, [title], [confidence])](#Ai_globalMatch) ⇒ <code>function</code>
+    * [.global(path, intents, [title], [meta])](#Ai_global) ⇒ <code>object</code>
+    * [.local(path, intents, [title])](#Ai_local) ⇒ <code>object</code>
+    * [.match(intent)](#Ai_match) ⇒ <code>function</code>
+    * [.shouldDisambiguate(aiActions)](#Ai_shouldDisambiguate) ⇒ <code>boolean</code>
 
 {% raw %}<div id="Ai_confidence">&nbsp;</div>{% endraw %}
 
@@ -87,14 +90,8 @@ Lower threshold - for disambiguation
 **Kind**: instance property of [<code>Ai</code>](#Ai)  
 {% raw %}<div id="Ai_logger">&nbsp;</div>{% endraw %}
 
-### ai.logger : <code>Object</code>
+### ai.logger : <code>object</code>
 The logger (console by default)
-
-**Kind**: instance property of [<code>Ai</code>](#Ai)  
-{% raw %}<div id="Ai_disableBookmarking">&nbsp;</div>{% endraw %}
-
-### ai.disableBookmarking : <code>boolean</code>
-Backward compatibility - to be able to use older "callback" middleware
 
 **Kind**: instance property of [<code>Ai</code>](#Ai)  
 {% raw %}<div id="Ai_matcher">&nbsp;</div>{% endraw %}
@@ -173,23 +170,64 @@ Registers Wingbot AI model
 - model <code>string</code> | [<code>WingbotModel</code>](#WingbotModel) | <code>T</code> - wingbot model name or AI plugin
 - prefix <code>string</code> <code> = &quot;default&quot;</code> - model prefix
 
-{% raw %}<div id="Ai_load">&nbsp;</div>{% endraw %}
+{% raw %}<div id="Ai_global">&nbsp;</div>{% endraw %}
 
-### ai.load()
-Middleware, which ensures, that AI data are properly loaded in Request
+### ai.global(path, intents, [title], [meta]) ⇒ <code>object</code>
+Returns matching middleware, that will export the intent to the root router
+so the intent will be matched in a global context
 
 **Kind**: instance method of [<code>Ai</code>](#Ai)  
+**Returns**: <code>object</code> - - the middleware  
+**Params**
+
+- path <code>string</code>
+- intents [<code>IntentRule</code>](#IntentRule) | [<code>Array.&lt;IntentRule&gt;</code>](#IntentRule)
+- [title] <code>string</code> <code> = null</code> - disambiguation title
+- [meta] <code>object</code> - metadata for multibot environments
+    - [.targetAppId] <code>object</code> - target application id
+    - [.targetAction] <code>object</code> - target action
+
 **Example**  
 ```javascript
-const { ai, Router } = require('wingbot');
+const { Router, ai } = require('wingbot');
 
-const bot = new Router();
+ai.register('app-model');
 
-bot.use(ai.load());
+bot.use(ai.global('route-path', 'intent1'), (req, res) => {
+    console.log(req.intent(true)); // { intent: 'intent1', score: 0.9604 }
+
+    res.text('Oh, intent 1 :)');
+});
+```
+{% raw %}<div id="Ai_local">&nbsp;</div>{% endraw %}
+
+### ai.local(path, intents, [title]) ⇒ <code>object</code>
+Returns matching middleware, that will export the intent to the root router
+so the intent will be matched in a context of local dialogue
+
+**Kind**: instance method of [<code>Ai</code>](#Ai)  
+**Returns**: <code>object</code> - - the middleware  
+**Params**
+
+- path <code>string</code>
+- intents [<code>IntentRule</code>](#IntentRule) | [<code>Array.&lt;IntentRule&gt;</code>](#IntentRule)
+- [title] <code>string</code> <code> = null</code> - disambiguation title
+
+**Example**  
+```javascript
+const { Router, ai } = require('wingbot');
+
+ai.register('app-model');
+
+bot.use(ai.global('route-path', 'intent1'), (req, res) => {
+    console.log(req.intent(true)); // { intent: 'intent1', score: 0.9604 }
+
+    res.text('Oh, intent 1 :)');
+});
 ```
 {% raw %}<div id="Ai_match">&nbsp;</div>{% endraw %}
 
-### ai.match(intent, [confidence]) ⇒ <code>function</code>
+### ai.match(intent) ⇒ <code>function</code>
 Returns matching middleware
 
 **supports:**
@@ -209,7 +247,6 @@ Returns matching middleware
 **Params**
 
 - intent [<code>IntentRule</code>](#IntentRule) | [<code>Array.&lt;IntentRule&gt;</code>](#IntentRule)
-- [confidence] <code>number</code> <code> = </code>
 
 **Example**  
 ```javascript
@@ -223,58 +260,14 @@ bot.use(ai.match('intent1'), (req, res) => {
     res.text('Oh, intent 1 :)');
 });
 ```
-{% raw %}<div id="Ai_localMatch">&nbsp;</div>{% endraw %}
+{% raw %}<div id="Ai_shouldDisambiguate">&nbsp;</div>{% endraw %}
 
-### ai.localMatch(intent, [title], [confidence]) ⇒ <code>function</code>
-Returns matching middleware, that will export the intent to the root router
-so the intent will be matched in a local context (nested Router)
-
+### ai.shouldDisambiguate(aiActions) ⇒ <code>boolean</code>
 **Kind**: instance method of [<code>Ai</code>](#Ai)  
-**Returns**: <code>function</code> - - the middleware  
 **Params**
 
-- intent [<code>IntentRule</code>](#IntentRule) | [<code>Array.&lt;IntentRule&gt;</code>](#IntentRule)
-- [title] <code>string</code> <code> = null</code>
-- [confidence] <code>number</code> <code> = </code>
+- aiActions [<code>Array.&lt;IntentAction&gt;</code>](#IntentAction)
 
-**Example**  
-```javascript
-const { Router, ai } = require('wingbot');
-
-ai.register('app-model');
-
-bot.use(ai.localMatch('intent1'), (req, res) => {
-    console.log(req.intent(true)); // { intent: 'intent1', score: 0.9604 }
-
-    res.text('Oh, intent 1 :)');
-});
-```
-{% raw %}<div id="Ai_globalMatch">&nbsp;</div>{% endraw %}
-
-### ai.globalMatch(intent, [title], [confidence]) ⇒ <code>function</code>
-Returns matching middleware, that will export the intent to the root router
-so the intent will be matched in a global context
-
-**Kind**: instance method of [<code>Ai</code>](#Ai)  
-**Returns**: <code>function</code> - - the middleware  
-**Params**
-
-- intent [<code>IntentRule</code>](#IntentRule) | [<code>Array.&lt;IntentRule&gt;</code>](#IntentRule)
-- [title] <code>string</code> <code> = null</code>
-- [confidence] <code>number</code> <code> = </code>
-
-**Example**  
-```javascript
-const { Router, ai } = require('wingbot');
-
-ai.register('app-model');
-
-bot.use(ai.globalMatch('intent1'), (req, res) => {
-    console.log(req.intent(true)); // { intent: 'intent1', score: 0.9604 }
-
-    res.text('Oh, intent 1 :)');
-});
-```
 {% raw %}<div id="WingbotModel">&nbsp;</div>{% endraw %}
 
 ## WingbotModel
@@ -289,7 +282,7 @@ bot.use(ai.globalMatch('intent1'), (req, res) => {
 ### new WingbotModel(options, [log])
 **Params**
 
-- options <code>Object</code>
+- options <code>object</code>
     - [.serviceUrl] <code>string</code>
     - .model <code>string</code>
     - [.cacheSize] <code>number</code>
@@ -319,7 +312,7 @@ bot.use(ai.globalMatch('intent1'), (req, res) => {
 ### new CachedModel(options, [log])
 **Params**
 
-- options <code>Object</code>
+- options <code>object</code>
     - [.cacheSize] <code>number</code>
 - [log] <code>Object</code>
 
@@ -369,14 +362,14 @@ When the entity is optional, the final score should be little bit lower
 ### aiMatching.redundantEntityHandicap : <code>number</code>
 When there are additional entities then required add a handicap for each unmatched entity
 Also works, when an optional entity was not matched
-(0.05 by default)
+(0.03 by default)
 
 **Kind**: instance property of [<code>AiMatching</code>](#AiMatching)  
 {% raw %}<div id="AiMatching_redundantIntentHandicap">&nbsp;</div>{% endraw %}
 
 ### aiMatching.redundantIntentHandicap : <code>number</code>
 When there is additional intent, the final score will be lowered by this value
-(0.15 by default)
+(0.06 by default)
 
 **Kind**: instance property of [<code>AiMatching</code>](#AiMatching)  
 {% raw %}<div id="AiMatching_multiMatchGain">&nbsp;</div>{% endraw %}
@@ -435,7 +428,7 @@ Calculate a matching score of preprocessed rule against the request
 
 {% raw %}<div id="EntityExpression">&nbsp;</div>{% endraw %}
 
-## EntityExpression : <code>Object</code>
+## EntityExpression : <code>object</code>
 **Kind**: global typedef  
 **Properties**
 
@@ -461,9 +454,35 @@ Text filter function
 
 ## IntentRule : <code>string</code> \| [<code>EntityExpression</code>](#EntityExpression)
 **Kind**: global typedef  
+{% raw %}<div id="BotPath">&nbsp;</div>{% endraw %}
+
+## BotPath : <code>object</code>
+**Kind**: global typedef  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| path | <code>string</code> | 
+
+{% raw %}<div id="IntentAction">&nbsp;</div>{% endraw %}
+
+## IntentAction : <code>object</code>
+**Kind**: global typedef  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| action | <code>string</code> | 
+| intent | [<code>Intent</code>](#Intent) | 
+| sort | <code>number</code> | 
+| local | <code>boolean</code> | 
+| aboveConfidence | <code>boolean</code> | 
+| [winner] | <code>boolean</code> | 
+| [title] | <code>string</code> | 
+
 {% raw %}<div id="Entity">&nbsp;</div>{% endraw %}
 
-## Entity : <code>Object</code>
+## Entity : <code>object</code>
 **Kind**: global typedef  
 **Params**
 
@@ -473,7 +492,7 @@ Text filter function
 
 {% raw %}<div id="Intent">&nbsp;</div>{% endraw %}
 
-## Intent : <code>Object</code>
+## Intent : <code>object</code>
 **Kind**: global typedef  
 **Params**
 
@@ -483,7 +502,7 @@ Text filter function
 
 {% raw %}<div id="Result">&nbsp;</div>{% endraw %}
 
-## Result : <code>Object</code>
+## Result : <code>object</code>
 **Kind**: global typedef  
 **Params**
 
@@ -492,7 +511,7 @@ Text filter function
 
 {% raw %}<div id="Entity">&nbsp;</div>{% endraw %}
 
-## Entity : <code>Object</code>
+## Entity : <code>object</code>
 **Kind**: global typedef  
 **Params**
 
@@ -502,7 +521,7 @@ Text filter function
 
 {% raw %}<div id="Intent">&nbsp;</div>{% endraw %}
 
-## Intent : <code>Object</code>
+## Intent : <code>object</code>
 **Kind**: global typedef  
 **Params**
 
@@ -512,7 +531,7 @@ Text filter function
 
 {% raw %}<div id="Result">&nbsp;</div>{% endraw %}
 
-## Result : <code>Object</code>
+## Result : <code>object</code>
 **Kind**: global typedef  
 **Params**
 
@@ -525,7 +544,7 @@ Text filter function
 **Kind**: global typedef  
 {% raw %}<div id="Entity">&nbsp;</div>{% endraw %}
 
-## Entity : <code>Object</code>
+## Entity : <code>object</code>
 **Kind**: global typedef  
 **Params**
 
@@ -535,7 +554,7 @@ Text filter function
 
 {% raw %}<div id="Intent">&nbsp;</div>{% endraw %}
 
-## Intent : <code>Object</code>
+## Intent : <code>object</code>
 **Kind**: global typedef  
 **Params**
 
@@ -545,7 +564,7 @@ Text filter function
 
 {% raw %}<div id="EntityExpression">&nbsp;</div>{% endraw %}
 
-## EntityExpression : <code>Object</code>
+## EntityExpression : <code>object</code>
 **Kind**: global typedef  
 **Properties**
 
@@ -562,7 +581,7 @@ Text filter function
 **Kind**: global typedef  
 {% raw %}<div id="RegexpComparator">&nbsp;</div>{% endraw %}
 
-## RegexpComparator : <code>Object</code>
+## RegexpComparator : <code>object</code>
 **Kind**: global typedef  
 **Properties**
 
@@ -573,7 +592,7 @@ Text filter function
 
 {% raw %}<div id="PreprocessorOutput">&nbsp;</div>{% endraw %}
 
-## PreprocessorOutput : <code>Object</code>
+## PreprocessorOutput : <code>object</code>
 **Kind**: global typedef  
 **Properties**
 
@@ -585,7 +604,7 @@ Text filter function
 
 {% raw %}<div id="AIRequest">&nbsp;</div>{% endraw %}
 
-## AIRequest : <code>Object</code>
+## AIRequest : <code>object</code>
 **Kind**: global typedef  
 **Properties**
 

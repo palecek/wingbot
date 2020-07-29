@@ -3,20 +3,29 @@
  */
 'use strict';
 
-const util = require('util');
 const ReceiptTemplate = require('./templates/ReceiptTemplate');
 const ButtonTemplate = require('./templates/ButtonTemplate');
 const GenericTemplate = require('./templates/GenericTemplate');
 const ListTemplate = require('./templates/ListTemplate');
 const { makeAbsolute, makeQuickReplies } = require('./utils');
-const { FLAG_DISAMBIGUATION_OFFERED } = require('./flags');
+const { FLAG_DISAMBIGUATION_OFFERED, FLAG_DO_NOT_LOG } = require('./flags');
 
 const TYPE_RESPONSE = 'RESPONSE';
 const TYPE_UPDATE = 'UPDATE';
 const TYPE_MESSAGE_TAG = 'MESSAGE_TAG';
+const EXCEPTION_HOPCOUNT_THRESHOLD = 5;
 
 /**
- * @typedef {Object} SenderMeta
+ * @typedef {object} QuickReply
+ * @prop {string} title
+ * @prop {string} [action]
+ * @prop {object} [data]
+ * @prop {object} [setState]
+ * @prop {RegExp|string|string[]} [match]
+ */
+
+/**
+ * @typedef {object} SenderMeta
  * @prop {string|null} flag
  * @prop {string} [likelyIntent]
  * @prop {string} [disambText]
@@ -40,7 +49,7 @@ class Responder {
          * and saved (with Object.assign) at the end of event processing
          * into the conversation state.
          *
-         * @prop {Object}
+         * @prop {object}
          */
         this.newState = {};
 
@@ -49,18 +58,19 @@ class Responder {
         this._bookmark = null;
 
         this.options = {
-            translator: w => w,
+            translator: (w) => w,
             appUrl: ''
         };
 
         Object.assign(this.options, options);
         if (this.options.autoTyping) {
-            this.options.autoTyping = Object.assign({
+            this.options.autoTyping = {
                 time: 450,
                 perCharacters: 'Sample text Sample texts'.length,
                 minTime: 400,
-                maxTime: 1400
-            }, this.options.autoTyping);
+                maxTime: 1400,
+                ...this.options.autoTyping
+            };
         }
 
         this._t = this.options.translator;
@@ -82,7 +92,7 @@ class Responder {
          * @param {string} blockName
          * @returns {Promise}
          */
-        this.run = blockName => Promise.resolve(blockName && undefined);
+        this.run = (blockName) => Promise.resolve(blockName && undefined);
 
         /**
          * Is true, when a final message (the quick replies by default) has been sent
@@ -102,6 +112,21 @@ class Responder {
 
         // both vars are package protected
         this._senderMeta = { flag: null };
+
+        this._persona = null;
+
+        this._recipient = { id: senderId };
+    }
+
+    /**
+     * Replaces recipient and disables autotyping
+     * Usefull for sending a one-time notification
+     *
+     * @param {object} recipient
+     */
+    setNotificationRecipient (recipient) {
+        this._recipient = recipient;
+        this.options.autoTyping = false;
     }
 
     /**
@@ -113,6 +138,16 @@ class Responder {
         return this._senderMeta;
     }
 
+    /**
+     * Disables logging the event to history
+     *
+     * @returns {this}
+     */
+    doNotLogTheEvent () {
+        this._senderMeta = { flag: FLAG_DO_NOT_LOG };
+        return this;
+    }
+
     // PROTECTED METHOD (called from ReturnSender)
     _visitedInteraction (action) {
         this._messageSender.visitedInteraction(action);
@@ -122,6 +157,16 @@ class Responder {
         if (!data.messagingType) {
             Object.assign(data, {
                 messaging_type: this._messagingType
+            });
+        }
+
+        if (typeof this._persona === 'string') {
+            Object.assign(data, {
+                persona_id: this._persona
+            });
+        } else if (this._persona && typeof this._persona === 'object') {
+            Object.assign(data, {
+                persona: this._persona
             });
         }
 
@@ -138,8 +183,9 @@ class Responder {
      * Stores current action to be able to all it again
      *
      * @param {string} [action]
-     * @param {Object} [winningIntent]
+     * @param {object} [winningIntent]
      * @returns {this}
+     * @deprecated
      * @example
      * bot.use(['action-name', /keyword/], (req, res) => {
      *     if (req.action() !== res.currentAction()) {
@@ -161,6 +207,7 @@ class Responder {
     /**
      * Returns the action of bookmark
      *
+     * @deprecated
      * @returns {string|null}
      */
     bookmark () {
@@ -171,8 +218,9 @@ class Responder {
      *
      *
      * @param {Function} postBack - the postback func
-     * @param {Object} [data] - data for bookmark action
+     * @param {object} [data] - data for bookmark action
      * @returns {Promise<null|boolean>}
+     * @deprecated
      * @example
      * // there should be a named intent intent matcher (ai.match() and 'action-name')
      *
@@ -198,10 +246,11 @@ class Responder {
             return true;
         }
         const bookmark = this._bookmark;
-        const sendData = Object.assign({
+        const sendData = {
             bookmark,
-            _winningIntent: this._winningIntent
-        }, data);
+            _winningIntent: this._winningIntent,
+            ...data
+        };
         const res = await postBack(bookmark, sendData, true);
         this._bookmark = null;
         return res;
@@ -213,9 +262,20 @@ class Responder {
      * @param {string} [tag]
      * @returns {this}
      */
-    setMessgingType (messagingType, tag = null) {
+    setMessagingType (messagingType, tag = null) {
         this._messagingType = messagingType;
         this._tag = tag;
+        return this;
+    }
+
+    /**
+     * Tets the persona for following requests
+     *
+     * @param {object|string|null} personaId
+     * @returns {this}
+     */
+    setPersona (personaId = null) {
+        this._persona = personaId;
         return this;
     }
 
@@ -229,7 +289,7 @@ class Responder {
     }
 
     /**
-     * @type {Object}
+     * @type {object}
      */
     get data () {
         return this._data;
@@ -238,7 +298,7 @@ class Responder {
     /**
      * Set temporary data to responder, which are persisted through single event
      *
-     * @param {Object} data
+     * @param {object} data
      * @returns {this}
      * @example
      *
@@ -261,65 +321,43 @@ class Responder {
         this.routePath = routePath;
     }
 
-    /* eslint jsdoc/check-param-names: 0 */
     /**
      * Send text as a response
      *
      * @param {string} text - text to send to user, can contain placeholders (%s)
-     * @param {...Object.<string, string>|Object[]} [quickReplies] - quick replies object
+     * @param {object.<string,string|QuickReply>|QuickReply[]} [replies] - quick replies
      * @returns {this}
      *
      * @example
      * // simply
-     * res.text('Hello %s', name, {
+     * res.text('Hello', {
      *     action: 'Quick reply',
      *     another: 'Another quick reply'
      * });
      *
      * // complex
-     * res.text('Hello %s', name, [
+     * res.text('Hello', [
      *     { action: 'action', title: 'Quick reply' },
      *     {
      *         action: 'complexAction', // required
      *         title: 'Another quick reply', // required
-     *         match: 'string' || /regexp/, // optional
-     *         someData: 'Will be included in payload data' // optional
+     *         setState: { prop: 'value' }, // optional
+     *         match: 'text' || /regexp/ || ['intent'], // optional
+     *         data:  { foo: 1  }'Will be included in payload data' // optional
      *     }
      * ]);
      */
-    text (text, ...quickReplies) {
+    text (text, replies = null) {
         const messageData = {
             recipient: {
-                id: this._senderId
+                ...this._recipient
             },
             message: {
-                text: null
+                text: this._t(text)
             }
         };
 
-        let replies = null;
-
-        if (quickReplies.length > 0
-            && typeof quickReplies[quickReplies.length - 1] === 'object'
-            && quickReplies[quickReplies.length - 1] !== null) {
-
-            replies = quickReplies.pop();
-        }
-
-        const translatedText = this._t(text);
-
-        if (quickReplies.length > 0) {
-            messageData.message.text = util.format(
-                translatedText,
-                // filter undefined and null values
-                ...quickReplies.map(a => (a !== null && typeof a !== 'undefined' ? a : ''))
-            );
-        } else {
-            messageData.message.text = translatedText;
-        }
-
         if (replies || this._quickReplyCollector.length !== 0) {
-
             const {
                 quickReplies: qrs, expectedKeywords, disambiguationIntents
             } = makeQuickReplies(replies, this.path, this._t, this._quickReplyCollector);
@@ -334,7 +372,9 @@ class Responder {
             if (qrs.length > 0) {
                 this.finalMessageSent = true;
                 messageData.message.quick_replies = qrs;
-                this.setState({ _expectedKeywords: expectedKeywords });
+
+                const { _expectedKeywords: expectedKws = [] } = this.newState;
+                this.setState({ _expectedKeywords: [...expectedKws, ...expectedKeywords] });
                 this._quickReplyCollector = [];
             }
         }
@@ -348,7 +388,7 @@ class Responder {
     /**
      * Sets new attributes to state (with Object.assign())
      *
-     * @param {Object} object
+     * @param {object} object
      * @returns {this}
      *
      * @example
@@ -362,9 +402,9 @@ class Responder {
     /**
      * Appends quick reply, to be sent with following text method
      *
-     * @param {string|Object} action - relative or absolute action
+     * @param {string|object} action - relative or absolute action
      * @param {string} [title] - quick reply title
-     * @param {Object} [data] - additional data
+     * @param {object} [data] - additional data
      * @param {boolean} [prepend] - set true to add reply at the beginning
      * @param {boolean} [justToExisting] - add quick reply only to existing replies
      * @example
@@ -387,16 +427,75 @@ class Responder {
         if (justToExisting) Object.assign(prep, { _justToExisting: true });
 
         if (actionIsObject) {
-            this._quickReplyCollector.push(Object.assign({}, prep, {
-                action: this.toAbsoluteAction(action.action)
-            }, data));
+            this._quickReplyCollector.push({
+                ...prep,
+                action: this.toAbsoluteAction(action.action),
+                ...data
+            });
         } else {
-            this._quickReplyCollector.push(Object.assign({
+            this._quickReplyCollector.push({
                 action: this.toAbsoluteAction(action),
-                title
-            }, data, prep));
+                title,
+                ...data,
+                ...prep
+            });
         }
 
+        return this;
+    }
+
+    /**
+     * To be able to keep context of previous interaction (expected action and intents)
+     * Just use this method to let user to answer again.
+     *
+     * @param {Request} req
+     * @param {boolean} [justOnce] - don't do it again
+     * @param {boolean} [includeKeywords] - keep intents from quick replies
+     * @returns {this}
+     * @example
+     *
+     * bot.use('start', (req, res) => {
+     *     res.text('What color do you like?', [
+     *         { match: ['@Color=red'], text: 'red', action: 'red' },
+     *         { match: ['@Color=blue'], text: 'blue', action: 'blue' }
+     *     ]);
+     *     res.expected('need-color')
+     * });
+     *
+     * bot.use('need-color', (req, res) => {
+     *     res.keepPreviousContext(req);
+     *     res.text('Sorry, only red or blue.');
+     * });
+     */
+    keepPreviousContext (req, justOnce = false, includeKeywords = false) {
+        // @ts-ignore
+        this.setState(req.expectedContext(justOnce, includeKeywords));
+        return this;
+    }
+
+    /**
+     *
+     * @param {string|string[]} intents
+     * @param {string} action
+     * @param {object} data
+     * @param {object} setState
+     */
+    expectedIntent (intents, action, data = {}, setState = null) {
+        const { _expectedKeywords: ex = [] } = this.newState;
+
+        const push = {
+            action: this.toAbsoluteAction(action),
+            match: intents,
+            data
+        };
+
+        if (setState) {
+            Object.assign(push, { setState });
+        }
+
+        ex.push(push);
+
+        this.setState({ _expectedKeywords: ex });
         return this;
     }
 
@@ -404,7 +503,7 @@ class Responder {
      * When user writes some text as reply, it will be processed as action
      *
      * @param {string} action - desired action
-     * @param {Object} data - desired action data
+     * @param {object} data - desired action data
      * @returns {this}
      */
     expected (action, data = {}) {
@@ -417,6 +516,48 @@ class Responder {
                 action: makeAbsolute(action, this.path),
                 data
             }
+        });
+    }
+
+    /**
+     * Makes a following user input anonymized
+     *
+     * - disables processing of it with NLP
+     * - replaces text content of incomming request before
+     *   storing it at ChatLogStorage using a `confidentInputFilter`
+     * - `req.isConfidentInput()` will return true
+     *
+     * After processing the user input, next requests will be processed as usual,
+     *
+     *
+     * @returns {this}
+     * @example
+     *
+     * const { Router } = require('wingbot');
+     *
+     * const bot = new Router();
+     *
+     * bot.use('start', (req, res) => {
+     *     // evil question
+     *     res.text('Give me your CARD NUMBER :D')
+     *         .expected('received-card-number')
+     *         .expectedConfidentInput();
+     * });
+     *
+     * bot.use('received-card-number', (req, res) => {
+     *     const cardNumber = req.text();
+     *
+     *     // raw card number
+     *
+     *     req.isConfidentInput(); // true
+     *
+     *     res.text('got it')
+     *         .setState({ cardNumber });
+     * });
+     */
+    expectedConfidentInput () {
+        return this.setState({
+            _expectedConfidentInput: true
         });
     }
 
@@ -509,7 +650,7 @@ class Responder {
 
         const messageData = {
             recipient: {
-                id: this._senderId
+                ...this._recipient
             },
             message: {
                 attachment: {
@@ -528,10 +669,35 @@ class Responder {
         return this;
     }
 
+    /**
+     * One-time Notification request
+     *
+     * use tag to be able to use the specific token with a specific campaign
+     *
+     * @param {string} title - propmt text
+     * @param {string} action - target action, when user subscribes
+     * @param {string} [tag] - subscribtion tag, which will be matched against a campaign
+     * @param {object} [data]
+     * @returns {this}
+     */
+    oneTimeNotificationRequest (title, action, tag = null, data = {}) {
+        return this.template({
+            template_type: 'one_time_notif_req',
+            title: this._t(title),
+            payload: JSON.stringify({
+                action: makeAbsolute(action, this.path),
+                data: {
+                    ...data,
+                    _ntfTag: tag
+                }
+            })
+        });
+    }
+
     template (payload) {
         const messageData = {
             recipient: {
-                id: this._senderId
+                ...this._recipient
             },
             message: {
                 attachment: {
@@ -541,10 +707,7 @@ class Responder {
             }
         };
 
-        const autoTyping = typeof payload.text === 'string'
-            ? payload.text
-            : null;
-
+        const autoTyping = payload.text || payload.title || null;
         this._autoTypingIfEnabled(autoTyping);
         this._send(messageData);
         return this;
@@ -592,23 +755,44 @@ class Responder {
      * Pass thread to another app
      *
      * @param {string} targetAppId
-     * @param {string|Object} [data]
+     * @param {string|object} [data]
      * @returns {this}
      */
     passThread (targetAppId, data = null) {
         let metadata = data;
-        if (data !== null && typeof data !== 'string') {
+
+        let { _$hopCount: $hopCount = -1 } = this._data;
+
+        if ($hopCount >= EXCEPTION_HOPCOUNT_THRESHOLD) {
+            throw new Error(`More than ${EXCEPTION_HOPCOUNT_THRESHOLD} handovers occured`);
+        } else {
+            $hopCount++;
+        }
+
+        if (data === null) {
+            metadata = JSON.stringify({
+                data: { $hopCount }
+            });
+        } else if (typeof data === 'object') {
+            metadata = JSON.stringify({
+                ...data,
+                data: {
+                    $hopCount,
+                    ...data.data
+                }
+            });
+        } else if (typeof data !== 'string') {
             metadata = JSON.stringify(data);
         }
+
         const messageData = {
             recipient: {
-                id: this._senderId
+                ...this._recipient
             },
-            target_app_id: targetAppId
+            target_app_id: targetAppId,
+            metadata
         };
-        if (metadata) {
-            Object.assign(messageData, { metadata });
-        }
+
         this.finalMessageSent = true;
         this._send(messageData);
         return this;
@@ -617,7 +801,7 @@ class Responder {
     /**
      * Request thread from Primary Receiver app
      *
-     * @param {string|Object} [data]
+     * @param {string|object} [data]
      * @returns {this}
      */
     requestThread (data = null) {
@@ -633,7 +817,7 @@ class Responder {
         }
         const messageData = {
             recipient: {
-                id: this._senderId
+                ...this._recipient
             },
             request_thread_control: metadata
         };
@@ -645,7 +829,7 @@ class Responder {
     /**
      * Take thread from another app
      *
-     * @param {string|Object} [data]
+     * @param {string|object} [data]
      * @returns {this}
      */
     takeThead (data = null) {
@@ -662,7 +846,7 @@ class Responder {
         }
         const messageData = {
             recipient: {
-                id: this._senderId
+                ...this._recipient
             },
             take_thread_control: metadata
         };
@@ -686,7 +870,7 @@ class Responder {
      */
     receipt (recipientName, paymentMethod = 'Cash', currency = 'USD', uniqueCode = null) {
         return new ReceiptTemplate(
-            payload => this.template(payload),
+            (payload) => this.template(payload),
             this._createContext(),
             recipientName,
             paymentMethod,
@@ -710,7 +894,7 @@ class Responder {
      */
     button (text) {
         const btn = new ButtonTemplate(
-            payload => this.template(payload),
+            (payload) => this.template(payload),
             this._createContext(),
             text
         );
@@ -739,7 +923,7 @@ class Responder {
      */
     genericTemplate (shareable = false, isSquare = false) {
         return new GenericTemplate(
-            payload => this.template(payload),
+            (payload) => this.template(payload),
             this._createContext(),
             shareable,
             isSquare
@@ -768,7 +952,7 @@ class Responder {
     list (topElementStyle = 'large') {
         return new ListTemplate(
             topElementStyle,
-            payload => this.template(payload),
+            (payload) => this.template(payload),
             this._createContext()
         );
     }
@@ -776,7 +960,7 @@ class Responder {
     /**
      * Override action tracking
      *
-     * @param {string|boolean} action
+     * @param {string|boolean} action - use false to not emit analytics events
      * @returns {this}
      */
     trackAs (action) {
@@ -805,7 +989,7 @@ class Responder {
     _senderAction (action) {
         const messageData = {
             recipient: {
-                id: this._senderId
+                ...this._recipient
             },
             sender_action: action
         };
@@ -857,7 +1041,6 @@ class Responder {
             this.options.autoTyping.maxTime
         );
     }
-
 }
 
 Responder.TYPE_MESSAGE_TAG = TYPE_MESSAGE_TAG;

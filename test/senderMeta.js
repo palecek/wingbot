@@ -10,7 +10,7 @@ const { disambiguationQuickReply } = require('../src/utils/quickReplies');
 const { FLAG_DISAMBIGUATION_OFFERED, FLAG_DISAMBIGUATION_SELECTED } = require('../src/flags');
 
 function wait (ms) {
-    return new Promise(r => setTimeout(r, ms));
+    return new Promise((r) => setTimeout(r, ms));
 }
 
 describe('senderMeta', () => {
@@ -32,8 +32,8 @@ describe('senderMeta', () => {
 
             let trackedMeta;
 
-            bot.on('action', (senderId, action, text, req, lastAction, doNotTrack, skill, meta) => {
-                trackedMeta = meta;
+            bot.on('action', (senderId, action, text, req, lastAction, doNotTrack, skill, res) => {
+                trackedMeta = res.senderMeta;
             });
 
             const t = new Tester(bot);

@@ -66,6 +66,18 @@ describe('Request', function () {
 
     });
 
+    describe('#isStandby()', function () {
+
+        it('should know, whats standby', function () {
+            const req = new Request({
+                ...Request.postBack(SENDER_ID, ACTION, DATA),
+                isStandby: true
+            }, STATE);
+            assert.strictEqual(req.isStandby(), true);
+        });
+
+    });
+
     describe('#isOptin()', function () {
 
         it('should know, whats optin', function () {
@@ -93,7 +105,7 @@ describe('Request', function () {
 
         it('should return action data from postback', function () {
             const req = new Request(Request.postBack(SENDER_ID, ACTION, DATA), STATE);
-            assert.deepEqual(req.action(true), DATA);
+            assert.deepEqual(req.actionData(), DATA);
         });
 
         it('should return referral action name from postback', function () {
@@ -109,7 +121,7 @@ describe('Request', function () {
                 Request.postBack(SENDER_ID, ACTION, DATA, REF_ACTION, REF_DATA),
                 STATE
             );
-            assert.deepEqual(req.action(true), REF_DATA);
+            assert.deepEqual(req.actionData(), REF_DATA);
         });
 
         it('should return action name from referral', function () {
@@ -119,7 +131,7 @@ describe('Request', function () {
 
         it('should return action data from postback', function () {
             const req = new Request(Request.referral(SENDER_ID, ACTION, DATA), STATE);
-            assert.deepEqual(req.action(true), DATA);
+            assert.deepEqual(req.actionData(), DATA);
         });
 
         it('should return action name from optin', function () {
@@ -129,7 +141,7 @@ describe('Request', function () {
 
         it('should return action data from optin', function () {
             const req = new Request(Request.optin(SENDER_ID, ACTION, DATA), STATE);
-            assert.deepEqual(req.action(true), DATA);
+            assert.deepEqual(req.actionData(), DATA);
         });
 
         it('should return action name from quick reply', function () {
@@ -139,7 +151,7 @@ describe('Request', function () {
 
         it('should return action data from quick reply', function () {
             const req = new Request(Request.quickReply(SENDER_ID, ACTION, DATA), STATE);
-            assert.deepEqual(req.action(true), DATA);
+            assert.deepEqual(req.actionData(), DATA);
         });
 
         it('should return action name from _expected state', function () {
@@ -151,37 +163,15 @@ describe('Request', function () {
         it('should return action data from _expected state', function () {
             const data = Request.quickReply(SENDER_ID, null);
             const req = new Request(data, { _expected: ACTION });
-            assert.deepEqual(req.action(true), {});
+            assert.deepEqual(req.actionData(), {});
         });
 
         it('should return action name from _expected text', function () {
             const data = Request.text(SENDER_ID, 'Foo Bar');
             const req = new Request(data, {
-                _expectedKeywords: [{ action: ACTION, match: 'foo-bar' }]
+                _expectedKeywords: [{ action: ACTION, match: '#foo-bar#' }]
             });
             assert.strictEqual(req.action(), ACTION);
-        });
-
-        it('should return default action from pass thread event', function () {
-            const req = new Request(Request.passThread(SENDER_ID, 'some-app'), STATE);
-            assert.strictEqual(req.action(), 'pass-thread');
-        });
-
-        it('should return specified action from pass thread event', function () {
-            const req = new Request(Request.passThread(SENDER_ID, 'some-app', ACTION), STATE);
-            assert.strictEqual(req.action(), ACTION);
-        });
-
-        it('should return default action from pass thread event when random data given', function () {
-            const data = { random: 'data' };
-            const req = new Request(Request.passThread(SENDER_ID, 'some-app', data), STATE);
-            assert.strictEqual(req.action(), 'pass-thread');
-        });
-
-        it('should return the data from pass thread event when given', function () {
-            const data = { random: 'data' };
-            const req = new Request(Request.passThread(SENDER_ID, 'some-app', data), STATE);
-            assert.deepStrictEqual(req.action(true), data);
         });
 
     });
@@ -262,15 +252,6 @@ describe('Request', function () {
 
     });
 
-    describe('#isPassThread()', function () {
-
-        it('should know, what is pass thread message', function () {
-            const req = new Request(Request.passThread(SENDER_ID, 'app', DATA), STATE);
-            assert.ok(req.isPassThread());
-        });
-
-    });
-
     describe('#isFile() / #isImage() / #isAttachment() / isSticker()', function () {
 
         it('should validate file type', function () {
@@ -305,7 +286,6 @@ describe('Request', function () {
 
         it('should recognize a sticker', () => {
             const req = new Request(Request.sticker(SENDER_ID, 1, ''));
-
 
             assert.strictEqual(req.isFile(), false);
             assert.strictEqual(req.isImage(), false);
@@ -359,33 +339,33 @@ describe('Request', function () {
     describe('#intent()', () => {
 
         it('should return intent, when present', async () => {
-            const req = new Request(Request.intent(SENDER_ID, 'any', 'foo'), STATE);
-            await Ai.ai.load()(req);
+            const req = new Request(Request.intentWithText(SENDER_ID, 'any', 'foo'), STATE);
+            await Ai.ai.preloadIntent(req);
             assert.strictEqual(req.intent(), 'foo');
         });
 
         it('should return intent data, when present', async () => {
-            const req = new Request(Request.intent(SENDER_ID, 'any', 'foo'), STATE);
-            await Ai.ai.load()(req);
+            const req = new Request(Request.intentWithText(SENDER_ID, 'any', 'foo'), STATE);
+            await Ai.ai.preloadIntent(req);
             assert.deepStrictEqual(req.intent(true), { intent: 'foo', score: 1 });
         });
 
         it('should return null, when present, but score is too low', async () => {
-            const req = new Request(Request.intent(SENDER_ID, 'any', 'foo'), STATE);
-            await Ai.ai.load()(req);
+            const req = new Request(Request.intentWithText(SENDER_ID, 'any', 'foo'), STATE);
+            await Ai.ai.preloadIntent(req);
             assert.strictEqual(req.intent(1.1), null);
             assert.strictEqual(req.intent(0.1), 'foo');
         });
 
         it('should return null, when intent is missing', async () => {
             const req = new Request(Request.postBack(SENDER_ID, 'any'), STATE);
-            await Ai.ai.load()(req);
+            await Ai.ai.preloadIntent(req);
             assert.strictEqual(req.intent(), null);
             assert.strictEqual(req.intent(true), null);
         });
 
         it('should return null, when AI middleware is not used', async () => {
-            const req = new Request(Request.intent(SENDER_ID, 'any', 'foo'), STATE);
+            const req = new Request(Request.intentWithText(SENDER_ID, 'any', 'foo'), STATE);
 
             assert.strictEqual(req.intent(), null);
             assert.strictEqual(req.intent(true), null);
@@ -431,6 +411,5 @@ describe('Request', function () {
         });
 
     });
-
 
 });

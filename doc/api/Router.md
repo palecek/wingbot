@@ -1,7 +1,9 @@
 ## Classes
 
 <dl>
-<dt><a href="#Router">Router</a> ⇐ <code>ReducerWrapper</code></dt>
+<dt><a href="#Router">Router</a> ⇐ <code><a href="#ReducerWrapper">ReducerWrapper</a></code></dt>
+<dd></dd>
+<dt><a href="#ReducerWrapper">ReducerWrapper</a> ⇐ <code>EventEmitter</code></dt>
 <dd></dd>
 </dl>
 
@@ -10,26 +12,29 @@
 <dl>
 <dt><a href="#Resolver">Resolver</a> : <code>function</code></dt>
 <dd></dd>
-<dt><a href="#Middleware">Middleware</a> : <code>string</code> | <code><a href="#Resolver">Resolver</a></code> | <code>RegExp</code> | <code><a href="#Router">Router</a></code></dt>
+<dt><a href="#BotPath">BotPath</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#Middleware">Middleware</a> : <code><a href="#Resolver">Resolver</a></code> | <code>string</code> | <code>RegExp</code> | <code><a href="#Router">Router</a></code> | <code><a href="#BotPath">BotPath</a></code></dt>
 <dd><p>flow control statement or function</p>
 </dd>
 </dl>
 
 {% raw %}<div id="Router">&nbsp;</div>{% endraw %}
 
-## Router ⇐ <code>ReducerWrapper</code>
+## Router ⇐ [<code>ReducerWrapper</code>](#ReducerWrapper)
 **Kind**: global class  
-**Extends**: <code>ReducerWrapper</code>  
+**Extends**: [<code>ReducerWrapper</code>](#ReducerWrapper)  
 
-* [Router](#Router) ⇐ <code>ReducerWrapper</code>
+* [Router](#Router) ⇐ [<code>ReducerWrapper</code>](#ReducerWrapper)
     * [new Router()](#new_Router_new)
     * _instance_
-        * [.use(...resolvers)](#Router_use) ⇒ <code>Object</code>
+        * [.use(...resolvers)](#Router_use) ⇒ <code>this</code>
+        * [.reduce(req, res, postBack)](#ReducerWrapper_reduce)
+        * [.emitAction(req, res, action)](#ReducerWrapper_emitAction)
     * _static_
         * [.CONTINUE](#Router_CONTINUE)
         * [.BREAK](#Router_BREAK)
         * [.END](#Router_END)
-        * [.exit(action, [data])](#Router_exit) ⇒ <code>Array</code>
 
 {% raw %}<div id="new_Router_new">&nbsp;</div>{% endraw %}
 
@@ -38,7 +43,7 @@ Cascading router
 
 {% raw %}<div id="Router_use">&nbsp;</div>{% endraw %}
 
-### router.use(...resolvers) ⇒ <code>Object</code>
+### router.use(...resolvers) ⇒ <code>this</code>
 Appends middleware, action handler or another router
 
 **Kind**: instance method of [<code>Router</code>](#Router)  
@@ -63,16 +68,60 @@ router.use('action', req => req.text() === 'a', (req, res) => {
 });
 
 // use multiple reducers
-router.use('/path', reducer1, reducer2)
-   .onExit('exitAction', (data, req, res, postBack) => {
-       postBack('anotherAction', { someData: true })
-   });
+router.use('/path', reducer1, reducer2);
+```
+{% raw %}<div id="ReducerWrapper_reduce">&nbsp;</div>{% endraw %}
 
-// append router with exit action
-router.use('/path', subRouter)
-   .onExit('exitAction', (data, req, res, postBack) => {
-       postBack('anotherAction', { someData: true })
-   });
+### router.reduce(req, res, postBack)
+Reducer function
+
+**Kind**: instance method of [<code>Router</code>](#Router)  
+**Overrides**: [<code>reduce</code>](#ReducerWrapper_reduce)  
+**Params**
+
+- req <code>Request</code>
+- res <code>Responder</code>
+- postBack <code>function</code>
+
+{% raw %}<div id="ReducerWrapper_emitAction">&nbsp;</div>{% endraw %}
+
+### router.emitAction(req, res, action)
+Low level tracking method,
+which disables the default automatic tracking
+for a single interaction.
+
+**Kind**: instance method of [<code>Router</code>](#Router)  
+**Params**
+
+- req <code>Request</code>
+- res <code>Responder</code>
+- action <code>string</code> | <code>boolean</code> <code> = null</code>
+
+**Example**  
+```javascript
+const router = new Router();
+
+router.on('action', (r, action) => {
+    // will receive the action event
+});
+
+router.use('interaction', (req, res) => {
+    // track 'foo' and 'bar', but not 'interaction'
+    router.trackAs(req, res, 'foo');
+    router.trackAs(req, res, 'bar');
+});
+
+router.use('will-not-be-tracked', (req, res) => {
+    // will stop Processor to fire an "event" event and also router will track nothing
+    router.trackAs(req, res, false);
+});
+
+router.use('disables-firing-processor-event', (req, res) => {
+    // will track 'foo-bar'
+    router.trackAs(req, res, 'foo-bar');
+    // will stop Processor to fire an "event" event
+    res.trackAs(false);
+});
 ```
 {% raw %}<div id="Router_CONTINUE">&nbsp;</div>{% endraw %}
 
@@ -113,24 +162,102 @@ Its same as returning `undefined`
 | --- |
 | <code>null</code> | 
 
-{% raw %}<div id="Router_exit">&nbsp;</div>{% endraw %}
+{% raw %}<div id="ReducerWrapper">&nbsp;</div>{% endraw %}
 
-### Router.exit(action, [data]) ⇒ <code>Array</code>
-Create the exit point
-Its same as returning `['action', { data }]`
+## ReducerWrapper ⇐ <code>EventEmitter</code>
+**Kind**: global class  
+**Extends**: <code>EventEmitter</code>  
+**Emits**: <code>ReducerWrapper#event:action</code>  
 
-**Kind**: static method of [<code>Router</code>](#Router)  
-**Params**
+* [ReducerWrapper](#ReducerWrapper) ⇐ <code>EventEmitter</code>
+    * [new ReducerWrapper()](#new_ReducerWrapper_new)
+    * _instance_
+        * [.reduce(req, res, postBack)](#ReducerWrapper_reduce)
+        * [.emitAction(req, res, action)](#ReducerWrapper_emitAction)
+    * _static_
+        * [.ReducerWrapper](#ReducerWrapper_ReducerWrapper)
+            * [new ReducerWrapper([reduce])](#new_ReducerWrapper_ReducerWrapper_new)
 
-- action <code>string</code> - the exit action
-- [data] <code>Object</code> - the data
+{% raw %}<div id="new_ReducerWrapper_new">&nbsp;</div>{% endraw %}
+
+### new ReducerWrapper()
+Solution for catching events. This is useful for analytics.
 
 **Example**  
 ```javascript
-router.use((req, res) => {
-    return Router.exit('exitName');
+const reducer = new ReducerWrapper((req, res) => {
+    res.text('Hello');
+});
+
+reducer.on('action', (senderId, processedAction, text, req, lastAction, skill, res) => {
+    // log action
 });
 ```
+{% raw %}<div id="ReducerWrapper_reduce">&nbsp;</div>{% endraw %}
+
+### reducerWrapper.reduce(req, res, postBack)
+Reducer function
+
+**Kind**: instance method of [<code>ReducerWrapper</code>](#ReducerWrapper)  
+**Params**
+
+- req <code>Request</code>
+- res <code>Responder</code>
+- postBack <code>function</code>
+
+{% raw %}<div id="ReducerWrapper_emitAction">&nbsp;</div>{% endraw %}
+
+### reducerWrapper.emitAction(req, res, action)
+Low level tracking method,
+which disables the default automatic tracking
+for a single interaction.
+
+**Kind**: instance method of [<code>ReducerWrapper</code>](#ReducerWrapper)  
+**Params**
+
+- req <code>Request</code>
+- res <code>Responder</code>
+- action <code>string</code> | <code>boolean</code> <code> = null</code>
+
+**Example**  
+```javascript
+const router = new Router();
+
+router.on('action', (r, action) => {
+    // will receive the action event
+});
+
+router.use('interaction', (req, res) => {
+    // track 'foo' and 'bar', but not 'interaction'
+    router.trackAs(req, res, 'foo');
+    router.trackAs(req, res, 'bar');
+});
+
+router.use('will-not-be-tracked', (req, res) => {
+    // will stop Processor to fire an "event" event and also router will track nothing
+    router.trackAs(req, res, false);
+});
+
+router.use('disables-firing-processor-event', (req, res) => {
+    // will track 'foo-bar'
+    router.trackAs(req, res, 'foo-bar');
+    // will stop Processor to fire an "event" event
+    res.trackAs(false);
+});
+```
+{% raw %}<div id="ReducerWrapper_ReducerWrapper">&nbsp;</div>{% endraw %}
+
+### ReducerWrapper.ReducerWrapper
+**Kind**: static class of [<code>ReducerWrapper</code>](#ReducerWrapper)  
+{% raw %}<div id="new_ReducerWrapper_ReducerWrapper_new">&nbsp;</div>{% endraw %}
+
+#### new ReducerWrapper([reduce])
+Creates an instance of ReducerWrapper.
+
+**Params**
+
+- [reduce] <code>function</code> - the handler function
+
 {% raw %}<div id="Resolver">&nbsp;</div>{% endraw %}
 
 ## Resolver : <code>function</code>
@@ -141,9 +268,19 @@ router.use((req, res) => {
 - [res] <code>Responder</code>
 - [postBack] <code>function</code>
 
+{% raw %}<div id="BotPath">&nbsp;</div>{% endraw %}
+
+## BotPath : <code>object</code>
+**Kind**: global typedef  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| path | <code>string</code> | 
+
 {% raw %}<div id="Middleware">&nbsp;</div>{% endraw %}
 
-## Middleware : <code>string</code> \| [<code>Resolver</code>](#Resolver) \| <code>RegExp</code> \| [<code>Router</code>](#Router)
+## Middleware : [<code>Resolver</code>](#Resolver) \| <code>string</code> \| <code>RegExp</code> \| [<code>Router</code>](#Router) \| [<code>BotPath</code>](#BotPath)
 flow control statement or function
 
 **Kind**: global typedef  

@@ -6,10 +6,10 @@
 const assert = require('assert');
 const sinon = require('sinon');
 const Processor = require('../src/Processor');
+const Request = require('../src/Request');
 const Tester = require('../src/Tester');
 const Router = require('../src/Router');
 const ReducerWrapper = require('../src/ReducerWrapper');
-const { readEvent, deliveryEvent } = require('../src/utils/RequestsFactories');
 
 const EMPTY_STATE = { user: {} };
 
@@ -295,13 +295,119 @@ describe('Processor', function () {
             const opts = makeOptions(stateStorage);
             const proc = new Processor(reducer, opts);
 
-            const readMessage = readEvent(1, 2);
-            const deliveryMessage = deliveryEvent(1, 2);
+            const readMessage = Request.readEvent(1, 2);
+            const deliveryMessage = Request.deliveryEvent(1, 2);
 
             await proc.processMessage(readMessage, 10);
             await proc.processMessage(deliveryMessage, 10);
 
             assert.strictEqual(reducer.callCount, 0);
+        });
+
+        it('should not fire the event if it should not be tracked', async () => {
+
+            const reducer = sinon.spy((req, res) => {
+                res.trackAs(false);
+            });
+
+            const stateStorage = createStateStorage();
+            const opts = makeOptions(stateStorage);
+            const proc = new Processor(new ReducerWrapper(reducer), opts);
+
+            let set = false;
+
+            proc.on('event', (s, action) => {
+                set = action;
+            });
+
+            await proc.processMessage({
+                sender: {
+                    id: 1
+                },
+                postback: {
+                    payload: {
+                        action: 'action'
+                    }
+                }
+            });
+
+            await new Promise((r) => setTimeout(r, 10));
+
+            assert(reducer.called);
+            assert.strictEqual(set, false);
+        });
+
+        it('should not fire the event if it should not be tracked', async () => {
+
+            const reducer = new ReducerWrapper((req, res) => {
+                reducer.emitAction(req, res, false);
+            });
+
+            const reducerGot = [];
+            reducer.on('action', (r, a) => reducerGot.push(a));
+
+            const stateStorage = createStateStorage();
+            const opts = makeOptions(stateStorage);
+            const proc = new Processor(reducer, opts);
+
+            let set = false;
+
+            proc.on('event', (s, action) => {
+                set = action;
+            });
+
+            await proc.processMessage({
+                sender: {
+                    id: 1
+                },
+                postback: {
+                    payload: {
+                        action: 'action'
+                    }
+                }
+            });
+
+            await new Promise((r) => setTimeout(r, 10));
+
+            assert.strictEqual(set, false);
+            assert.deepEqual(reducerGot, []);
+        });
+
+        it('should enable user tracking', async () => {
+
+            const reducer = new ReducerWrapper((req, res) => {
+                reducer.emitAction(req, res, 'abc');
+                reducer.emitAction(req, res, 'efg');
+            });
+
+            const reducerGot = [];
+            reducer.on('action', (r, a) => reducerGot.push(a));
+
+            const stateStorage = createStateStorage();
+            const opts = makeOptions(stateStorage);
+            const proc = new Processor(reducer, opts);
+
+            let set = false;
+
+            proc.on('event', (s, action) => {
+                set = action;
+            });
+
+            await proc.processMessage({
+                sender: {
+                    id: 1
+                },
+                postback: {
+                    payload: {
+                        action: 'action'
+                    }
+                }
+            });
+
+            await new Promise((r) => setTimeout(r, 10));
+
+            assert.strictEqual(set, 'efg');
+            assert.deepEqual(reducerGot, ['abc', 'efg']);
         });
 
         it('invalid messages should be logged', function () {
@@ -314,7 +420,7 @@ describe('Processor', function () {
             const opts = makeOptions(stateStorage);
             const proc = new Processor(reducer, opts);
 
-            return proc.processMessage()
+            return proc.processMessage({})
                 .then(() => {
                     assert(opts.log.warn.calledOnce);
                     return proc.processMessage({});
@@ -333,7 +439,7 @@ describe('Processor', function () {
 
             const reducer = sinon.spy((req, res, postBack) => {
                 if (!req.action()) {
-                    const data = new Promise(r => setTimeout(() => r({ some: 1 }), 50));
+                    const data = new Promise((r) => setTimeout(() => r({ some: 1 }), 50));
                     postBack('actionName', data);
                 }
             });
@@ -384,7 +490,7 @@ describe('Processor', function () {
                 }
             })
                 // events are processed as next tick
-                .then(res => new Promise(r => process.nextTick(() => r(res))))
+                .then((res) => new Promise((r) => process.nextTick(() => r(res))))
                 .then((res) => {
                     assert(reducer.calledOnce);
 
@@ -431,14 +537,14 @@ describe('Processor', function () {
         it('makes async postbacks', async () => {
             const bot = new Router();
 
-            const wait = resData => new Promise(r => setTimeout(() => r(resData), 100));
+            const wait = (resData) => new Promise((r) => setTimeout(() => r(resData), 100));
 
             bot.use('start', (req, res, postBack) => {
                 postBack('process', async () => wait({ test: 2 }));
             });
 
             bot.use('process', (req, res) => {
-                res.text(`result is ${req.action(true).test}`);
+                res.text(`result is ${req.actionData().test}`);
             });
 
             const t = new Tester(bot);
@@ -468,8 +574,18 @@ describe('Processor', function () {
             });
 
             mockPlugin = {
-                processMessage: sinon.spy(message => ({ status: message.sender.id })),
-                middleware: sinon.spy(() => middleware)
+                processMessage: sinon.spy((message) => ({ status: message.sender.id })),
+                middleware: sinon.spy(() => middleware),
+                beforeAiPreload: sinon.spy((req) => (req.event.beforeAiPreload !== undefined
+                    ? req.event.beforeAiPreload
+                    : true)),
+                beforeProcessMessage: sinon.spy((req) => (
+                    req.event.beforeProcessMessage !== undefined
+                        ? req.event.beforeProcessMessage
+                        : true)),
+                afterProcessMessage: sinon.spy((req) => (req.event.afterProcessMessage !== undefined
+                    ? req.event.afterProcessMessage
+                    : true))
             };
 
             mockReducer = sinon.spy((req, res) => {
@@ -479,6 +595,8 @@ describe('Processor', function () {
             p = new Processor(mockReducer);
 
             p.plugin(mockPlugin);
+            // empty plugin to ensure the optional methods are working
+            p.plugin({});
         });
 
         it('just works', async () => {
@@ -487,9 +605,96 @@ describe('Processor', function () {
             });
 
             assert.equal(mockPlugin.processMessage.calledOnce, true, 'plugin process method should  be called');
+            assert.equal(mockPlugin.beforeAiPreload.calledOnce, false, 'plugin beforeAiPreload method should not be called');
+            assert.equal(mockPlugin.beforeProcessMessage.calledOnce, false, 'plugin beforeProcessMessage method should not be called');
+            assert.equal(mockPlugin.afterProcessMessage.calledOnce, false, 'plugin afterProcessMessage method should not be called');
             assert.equal(middleware.called, false, 'middleware should not be called');
             assert.equal(mockReducer.called, false, 'mockReducer should not be called');
             assert.deepEqual(res, { status: 200 }, 'response should be ok');
+        });
+
+        it('goes through all methods', async () => {
+            const res = await p.processMessage({
+                sender: { id: 300 },
+                message: { text: 'a' }
+            });
+
+            assert.equal(mockPlugin.processMessage.calledOnce, true, 'plugin process method should  be called');
+            assert.equal(mockPlugin.beforeAiPreload.calledOnce, true, 'plugin beforeAiPreload method should  be called');
+            assert.equal(mockPlugin.beforeProcessMessage.calledOnce, true, 'plugin beforeProcessMessage method should  be called');
+            assert.equal(mockPlugin.afterProcessMessage.calledOnce, true, 'plugin afterProcessMessage method should  be called');
+            assert.equal(middleware.called, true, 'middleware should not be called');
+            assert.equal(mockReducer.called, true, 'mockReducer should not be called');
+            assert.deepEqual(res, { ...res, status: 200 }, 'response should be ok');
+        });
+
+        it('goes works with async methods', async () => {
+            const res = await p.processMessage({
+                sender: { id: 300 },
+                message: { text: 'a' },
+                beforeAiPreload: Promise.resolve(true),
+                beforeProcessMessage: Promise.resolve(true),
+                afterProcessMessage: Promise.resolve(true)
+            });
+
+            assert.equal(mockPlugin.processMessage.calledOnce, true, 'plugin process method should  be called');
+            assert.equal(mockPlugin.beforeAiPreload.calledOnce, true, 'plugin beforeAiPreload method should  be called');
+            assert.equal(mockPlugin.beforeProcessMessage.calledOnce, true, 'plugin beforeProcessMessage method should  be called');
+            assert.equal(mockPlugin.afterProcessMessage.calledOnce, true, 'plugin afterProcessMessage method should  be called');
+            assert.equal(middleware.called, true, 'middleware should not be called');
+            assert.equal(mockReducer.called, true, 'mockReducer should not be called');
+            assert.deepEqual(res, { ...res, status: 200 }, 'response should be ok');
+        });
+
+        it('is able to stop the processing', async () => {
+            const res = await p.processMessage({
+                sender: { id: 300 },
+                message: { text: 'a' },
+                beforeAiPreload: Promise.resolve(false),
+                beforeProcessMessage: Promise.resolve(true),
+                afterProcessMessage: Promise.resolve()
+            });
+
+            assert.equal(mockPlugin.processMessage.calledOnce, true, 'plugin process method should  be called');
+            assert.equal(mockPlugin.beforeAiPreload.calledOnce, true, 'plugin beforeAiPreload method should  be called');
+            assert.equal(mockPlugin.beforeProcessMessage.calledOnce, false, 'plugin beforeProcessMessage method should not be called');
+            assert.equal(mockPlugin.afterProcessMessage.calledOnce, false, 'plugin afterProcessMessage method should not be called');
+            assert.equal(middleware.called, false, 'middleware should not be called');
+            assert.equal(mockReducer.called, false, 'mockReducer should not be called');
+            assert.deepEqual(res, { ...res, status: 204 }, 'response should be ok');
+        });
+
+        it('is able to stop the processing', async () => {
+            let res = await p.processMessage({
+                sender: { id: 300 },
+                message: { text: 'a' },
+                beforeAiPreload: Promise.resolve(false),
+                beforeProcessMessage: Promise.resolve()
+            });
+
+            assert.equal(mockPlugin.processMessage.calledOnce, true, 'plugin process method should  be called');
+            assert.equal(mockPlugin.beforeAiPreload.calledOnce, true, 'plugin beforeAiPreload method should  be called');
+            assert.equal(mockPlugin.beforeProcessMessage.calledOnce, false, 'plugin beforeProcessMessage method should not be called');
+            assert.equal(mockPlugin.afterProcessMessage.calledOnce, false, 'plugin afterProcessMessage method should not be called');
+            assert.equal(middleware.called, false, 'middleware should not be called');
+            assert.equal(mockReducer.called, false, 'mockReducer should not be called');
+            assert.deepEqual(res, { ...res, status: 204 }, 'response should be ok');
+
+            res = await p.processMessage({
+                sender: { id: 300 },
+                message: { text: 'a' },
+                beforeAiPreload: Promise.resolve(true),
+                beforeProcessMessage: Promise.resolve(false),
+                afterProcessMessage: Promise.resolve(true)
+            });
+
+            assert.equal(mockPlugin.processMessage.calledTwice, true, 'plugin process method should  be called');
+            assert.equal(mockPlugin.beforeAiPreload.calledTwice, true, 'plugin beforeAiPreload method should  be called');
+            assert.equal(mockPlugin.beforeProcessMessage.calledTwice, false, 'plugin beforeProcessMessage method should not be called');
+            assert.equal(mockPlugin.afterProcessMessage.calledOnce, false, 'plugin afterProcessMessage method should not be called');
+            assert.equal(middleware.called, false, 'middleware should not be called');
+            assert.equal(mockReducer.called, false, 'mockReducer should not be called');
+            assert.deepEqual(res, { ...res, status: 204 }, 'response should be ok');
         });
 
         it('throws error when the plugin does not return status', async () => {

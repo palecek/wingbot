@@ -7,6 +7,7 @@ const assert = require('assert');
 const sinon = require('sinon');
 const Router = require('../../src/Router');
 const Tester = require('../../src/Tester');
+const Request = require('../../src/Request');
 const Notifications = require('../../src/notifications/Notifications');
 
 const TEST_ITEMS = 20;
@@ -99,10 +100,10 @@ describe('Notifications', function () {
     });
 
     function wait (ms) {
-        return new Promise(res => setTimeout(res, ms));
+        return new Promise((res) => setTimeout(res, ms));
     }
 
-    describe('#middleware()', () => {
+    describe('#beforeProcessMessage()', () => {
 
         let bot;
         /** @type {Notifications} */
@@ -117,8 +118,6 @@ describe('Notifications', function () {
                 .createCampaign('Test', 'testAction', {}, {
                     id: 'identifiedCampaign', exclude: ['left']
                 });
-
-            bot.use(notifications.middleware());
 
             bot.use('testAction', (req, res) => {
                 res.text('Hello');
@@ -142,6 +141,19 @@ describe('Notifications', function () {
 
                 // @ts-ignore
                 res.subscribe('anyTag');
+
+                res.expectedIntent('intent', 'check', {}, {
+                    [Notifications.SUBSCRIBE]: ['another'],
+                    [Notifications.UNSUBSCRIBE]: ['anyTag']
+                });
+            });
+
+            bot.use('one', (req, res) => {
+                res.oneTimeNotificationRequest('title', 'subscribed', 'onetime');
+            });
+
+            bot.use('subscribed', (req, res) => {
+                res.text('success');
             });
 
             bot.use('check', (req, res, postBack) => {
@@ -155,6 +167,7 @@ describe('Notifications', function () {
 
         it('remembers subcribtions', async () => {
             const t = new Tester(bot);
+            t.processor.plugin(notifications);
 
             await t.postBack('start');
 
@@ -169,14 +182,36 @@ describe('Notifications', function () {
                 .contains('"#all"');
         });
 
+        it('subscribes user by user data`', async () => {
+            const t = new Tester(bot);
+            t.processor.plugin(notifications);
+
+            await t.postBack('start');
+
+            assert.throws(() => t.passedAction('testAction'));
+
+            await wait(100);
+
+            await t.intent('intent');
+
+            await wait(100);
+
+            t.any()
+                .contains('"another"')
+                .contains('"#all"');
+        });
+
         it('is possible to trigger action in right time and it\'s not added again', async () => {
             const t = new Tester(bot);
+            t.processor.plugin(notifications);
 
             await t.postBack('start');
 
             assert.throws(() => t.passedAction('testAction'));
 
             await notifications.runCampaign(campaign);
+
+            await wait(50);
 
             await notifications.processQueue(t);
 
@@ -188,7 +223,11 @@ describe('Notifications', function () {
 
             t.cleanup();
 
+            await wait(50);
+
             await notifications.processQueue(t);
+
+            await wait(50);
 
             assert.throws(() => t.passedAction('testAction'));
 
@@ -224,6 +263,7 @@ describe('Notifications', function () {
 
         it('does not sent a message, when user leaves target group', async () => {
             const t = new Tester(bot);
+            t.processor.plugin(notifications);
 
             await t.postBack('start');
 
@@ -245,6 +285,7 @@ describe('Notifications', function () {
 
         it('does not sent a message, when campaign has been removed or deactivated', async () => {
             const t = new Tester(bot);
+            t.processor.plugin(notifications);
 
             await t.postBack('start');
 
@@ -259,8 +300,46 @@ describe('Notifications', function () {
             assert.throws(() => t.passedAction('testAction'));
         });
 
+        it('is able to send notification using a one time notification subscribtion', async () => {
+            const t = new Tester(bot);
+            t.processor.plugin(notifications);
+
+            await notifications._storage.updateCampaign(campaign.id, {
+                include: ['onetime']
+            });
+
+            // shows the request
+            await t.postBack('one');
+
+            t.any().contains('title');
+
+            // simulate the confirmation
+            const optin = Request.oneTimeOptIn(t.senderId, 'my-token');
+            const lastResponse = t.responses[t.responses.length - 1];
+            optin.optin.payload = lastResponse.message.attachment.payload.payload;
+            await t.processMessage(optin);
+
+            t.any()
+                .contains('success');
+
+            await notifications.runCampaign(campaign);
+
+            t.cleanup();
+
+            await wait(50);
+
+            await notifications.processQueue(t);
+
+            await wait(50);
+
+            t.passedAction('testAction');
+            assert.equal(t.responses.length, 1);
+            assert.deepEqual(t.responses[0].recipient, { one_time_notif_token: 'my-token' });
+        });
+
         it('does not sent a message, when campaign has a condition', async () => {
             const t = new Tester(bot);
+            t.processor.plugin(notifications);
 
             await t.postBack('start');
 
@@ -280,8 +359,41 @@ describe('Notifications', function () {
             assert.throws(() => t.passedAction('testAction'));
         });
 
+        it('does not sent a message, when the campaign is limited to 24h', async () => {
+            const t = new Tester(bot);
+            t.processor.plugin(notifications);
+
+            await t.postBack('start');
+
+            await wait(10);
+
+            t.setState({ _ntfLastInteraction: Date.now() - 24 * 3600000 });
+
+            await notifications._storage.updateCampaign(campaign.id, {
+                hasCondition: false,
+                in24hourWindow: true
+            });
+
+            await notifications.runCampaign(campaign);
+
+            t.cleanup();
+
+            await notifications.processQueue(t);
+
+            const c = await notifications._storage
+                .getUnsuccessfulSubscribersByCampaign(campaign.id);
+
+            assert.throws(() => t.passedAction('testAction'));
+
+            assert.deepEqual(c, [{
+                pageId: t.pageId,
+                senderId: t.senderId
+            }]);
+        });
+
         it('should not send a campaign twice to single user', async () => {
             const t = new Tester(bot);
+            t.processor.plugin(notifications);
 
             await t.postBack('start');
 
@@ -311,6 +423,7 @@ describe('Notifications', function () {
 
         it('should send a campaign twice to single user when enabled', async () => {
             const t = new Tester(bot);
+            t.processor.plugin(notifications);
 
             await t.postBack('start');
 
@@ -345,6 +458,7 @@ describe('Notifications', function () {
 
         it('does not fail, when campaign has been removed - uses <removed> as name of campaign', async () => {
             const t = new Tester(bot);
+            t.processor.plugin(notifications);
 
             await t.postBack('start');
 
@@ -387,6 +501,7 @@ describe('Notifications', function () {
 
         it('makes able to send sliding campaigns', async () => {
             const t = new Tester(bot);
+            t.processor.plugin(notifications);
 
             let slidingCampaign = await notifications.createCampaign('sliding one', 'testAction', {}, {
                 sliding: true,
@@ -436,6 +551,7 @@ describe('Notifications', function () {
 
         it('is able to shedule campaigns', async () => {
             const t = new Tester(bot);
+            t.processor.plugin(notifications);
 
             await t.postBack('start');
 
@@ -465,7 +581,7 @@ describe('Notifications', function () {
             const bot = new Router();
 
             bot.use('camp-action', (req, res) => {
-                const { a = 'noo' } = req.action(true);
+                const { a = 'noo' } = req.actionData();
 
                 res.text('yeeesss')
                     .text(a);

@@ -3,7 +3,6 @@
  */
 'use strict';
 
-
 const assert = require('assert');
 const Processor = require('./Processor');
 const Request = require('./Request');
@@ -30,7 +29,7 @@ class Tester {
      * @param {Router|ReducerWrapper|Function} reducer
      * @param {string} [senderId=null]
      * @param {string} [pageId=null]
-     * @param {Object} [processorOptions={}] - options for Processor
+     * @param {object} [processorOptions={}] - options for Processor
      * @param {MemoryStateStorage} [storage] - place to override the storage
      *
      * @memberOf Tester
@@ -72,16 +71,17 @@ class Tester {
             });
         });
 
-        this.processor = new Processor(wrappedReducer, Object.assign({
+        this.processor = new Processor(wrappedReducer, ({
             stateStorage: this.storage,
             log,
-            loadUsers: false
-        }, processorOptions));
+            loadUsers: false,
+            ...processorOptions
+        }));
 
         // attach the plugin tester
         this.processor.plugin({
             processMessage: () => ({ status: 204 }),
-            middleware: () => (req, res) => {
+            beforeProcessMessage: (req, res) => {
                 req.params = {};
                 Object.assign(res, {
                     run: (blockName) => {
@@ -98,14 +98,19 @@ class Tester {
         this.actions = [];
 
         /**
-         * @type {Object} predefined test data to use
+         * @prop {object} predefined test data to use
          */
         this.testData = {};
 
         /**
-         * @type {boolean} allow tester to process empty responses
+         * @prop {boolean} allow tester to process empty responses
          */
         this.allowEmptyResponse = false;
+
+        /**
+         * @prop {console} use own loggger
+         */
+        this.senderLogger = undefined;
     }
 
     /**
@@ -133,17 +138,17 @@ class Tester {
     /**
      * Use tester as a connector :)
      *
-     * @param {Object} message - wingbot chat event
+     * @param {object} message - wingbot chat event
      * @param {string} senderId - chat event sender identifier
      * @param {string} pageId - channel/page identifier
      * @returns {Promise<any>}
      */
     async processMessage (message, senderId = this.senderId, pageId = this.pageId) {
-        const messageSender = new ReturnSender({}, senderId, message);
+        const messageSender = new ReturnSender({}, senderId, message, this.senderLogger);
         messageSender.simulatesOptIn = true;
 
         const res = await this.processor
-            .processMessage(message, pageId, messageSender, Object.assign({}, this.testData));
+            .processMessage(message, pageId, messageSender, { ...this.testData });
         this._acquireResponseActions(res, messageSender);
 
         return res;
@@ -216,13 +221,14 @@ class Tester {
      */
     passedAction (path) {
         const ok = this.actions
-            .some(action => !action.action.match(/\*/) && actionMatches(action.action, path));
+            .some((action) => (action.action === path
+                || (!action.action.match(/\*/) && actionMatches(action.action, path))));
         let actual;
         if (!ok) {
             const set = new Set();
             actual = this.actions
-                .map(a => (a.doNotTrack ? `(system interaction) ${a.action}` : a.action))
-                .filter(a => !set.has(a) && set.add(a));
+                .map((a) => (a.doNotTrack ? `(system interaction) ${a.action}` : a.action))
+                .filter((a) => !set.has(a) && set.add(a));
             assert.fail(asserts.ex('Interaction was not passed', path, actual));
         }
         return this;
@@ -245,7 +251,7 @@ class Tester {
     /**
      * Returns state
      *
-     * @returns {Object}
+     * @returns {object}
      *
      * @memberOf Tester
      */
@@ -260,13 +266,13 @@ class Tester {
     /**
      * Sets state with `Object.assign()`
      *
-     * @param {Object} [state={}]
+     * @param {object} [state={}]
      *
      * @memberOf Tester
      */
     setState (state) {
         const stateObj = this.getState();
-        stateObj.state = Object.assign({}, stateObj.state, state);
+        stateObj.state = { ...stateObj.state, ...state };
         this.storage.saveState(stateObj);
     }
 
@@ -292,16 +298,11 @@ class Tester {
      *
      * @memberOf Tester
      */
-    intent (intent, text = null, score = null) {
-        let useText;
+    intent (intent, text = null, score = undefined) {
         if (text) {
-            useText = text;
-        } else if (Array.isArray(intent)) {
-            [useText] = intent;
-        } else {
-            useText = intent;
+            return this.processMessage(Request.intentWithText(this.senderId, text, intent, score));
         }
-        return this.processMessage(Request.intent(this.senderId, useText, intent, score));
+        return this.processMessage(Request.intent(this.senderId, intent, score));
     }
 
     /**
@@ -322,23 +323,10 @@ class Tester {
     }
 
     /**
-     * Makes pass thread control request
-     *
-     * @param {string|Object} [data] - action
-     * @param {string} [appId] - specific app id
-     * @returns {Promise}
-     *
-     * @memberOf Tester
-     */
-    passThread (data = null, appId = 'random-app') {
-        return this.processMessage(Request.passThread(this.senderId, appId, data));
-    }
-
-    /**
      * Make optin call
      *
      * @param {string} action
-     * @param {Object} [data={}]
+     * @param {object} [data={}]
      * @param {string} [userRef] - specific ref string
      * @returns {Promise}
      *
@@ -356,7 +344,7 @@ class Tester {
      * Send quick reply
      *
      * @param {string} action
-     * @param {Object} [data={}]
+     * @param {object} [data={}]
      * @returns {Promise}
      *
      * @memberOf Tester
@@ -411,9 +399,9 @@ class Tester {
      * Sends postback, optionally with referrer action
      *
      * @param {string} action
-     * @param {Object} [data={}]
+     * @param {object} [data={}]
      * @param {string} [refAction=null] - referred action
-     * @param {Object} [refData={}] - referred action data
+     * @param {object} [refData={}] - referred action data
      * @returns {Promise}
      *
      * @memberOf Tester

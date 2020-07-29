@@ -13,7 +13,7 @@
 ## Typedefs
 
 <dl>
-<dt><a href="#ConfigStorage">ConfigStorage</a> : <code>Object</code></dt>
+<dt><a href="#ConfigStorage">ConfigStorage</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#Plugin">Plugin</a> : <code>function</code></dt>
 <dd></dd>
@@ -29,7 +29,7 @@
     * [new BuildRouter(block, plugins, context, [request])](#new_BuildRouter_new)
     * _instance_
         * [.keepConfigFor](#BuildRouter_keepConfigFor)
-        * [.loadBot()](#BuildRouter_loadBot) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.loadBot()](#BuildRouter_loadBot) ⇒ <code>Promise.&lt;object&gt;</code>
     * _static_
         * [.fromData(blocks, plugins, [context])](#BuildRouter_fromData)
 
@@ -45,31 +45,29 @@ Create new router from configuration
 
 **Params**
 
-- block <code>Object</code>
+- block <code>object</code>
     - [.botId] <code>string</code> - the ID of bot
     - [.snapshot] <code>string</code> - snapshot stage of bot
     - [.token] <code>string</code> | <code>Promise.&lt;string&gt;</code> - authorization token for bot
-    - [.routes] <code>Object</code> - list of routes for direct bot build
     - [.url] <code>string</code> - specify alternative configuration resource
 - plugins [<code>Plugins</code>](#Plugins) - custom code blocks resource
-- context <code>Object</code> - the building context
-    - [.linksTranslator] <code>Object</code> - function, that translates links globally
+- context <code>object</code> - the building context
+    - [.linksTranslator] <code>object</code> - function, that translates links globally
     - [.configStorage] [<code>ConfigStorage</code>](#ConfigStorage) - function, that translates links globally
     - [.allowForbiddenSnippetWords] <code>boolean</code> - disable security rule
 - [request] <code>function</code> - the building context
 
 **Example**  
 ```javascript
-// usage under serverless environment
+// usage of plugins
 
-const { Settings, BuildRouter, Blocks } = require('wingbot');
-const { createHandler, createProcessor } = require(''wingbot/serverlessAWS');
+const { BuildRouter, Plugins } = require('wingbot');
 const dynamoDb = require('./lib/dynamodb');
 const config = require('./config');
 
-const blocks = new Blocks();
+const plugins = new Plugins();
 
-blocks.code('exampleBlock', async (req, res, postBack, context, params) => {
+plugins.register('exampleBlock', async (req, res, postBack) => {
     await res.run('responseBlockName');
 });
 
@@ -77,27 +75,9 @@ const bot = new BuildRouter({
     botId: 'b7a71c27-c295-4ab0-b64e-6835b50a0db0',
     snapshot: 'master',
     token: 'adjsadlkadjj92n9u9'
-}, blocks);
+}, plugins);
 
-const processor = createProcessor(bot, {
-    appUrl: config.pageUrl,
-    pageToken: config.facebook.pageToken,
-    appSecret: config.facebook.appSecret,
-    autoTyping: true,
-    dynamo: {
-        db: dynamoDb,
-        tablePrefix: `${config.prefix}-`
-    }
-});
-
-const settings = new Settings(config.facebook.pageToken, log);
-
-if (config.isProduction) {
-    settings.getStartedButton('/start');
-    settings.whitelistDomain(config.pageUrl);
-}
-
-module.exports.handleRequest = createHandler(processor, config.facebook.botToken);
+module.exports = bot;
 ```
 {% raw %}<div id="BuildRouter_keepConfigFor">&nbsp;</div>{% endraw %}
 
@@ -113,7 +93,7 @@ Timeout, when the router is not checking for new configuration
 
 {% raw %}<div id="BuildRouter_loadBot">&nbsp;</div>{% endraw %}
 
-### buildRouter.loadBot() ⇒ <code>Promise.&lt;Object&gt;</code>
+### buildRouter.loadBot() ⇒ <code>Promise.&lt;object&gt;</code>
 Loads conversation configuration
 
 **Kind**: instance method of [<code>BuildRouter</code>](#BuildRouter)  
@@ -123,9 +103,9 @@ Loads conversation configuration
 **Kind**: static method of [<code>BuildRouter</code>](#BuildRouter)  
 **Params**
 
-- blocks <code>Array.&lt;Object&gt;</code> - blocks list
+- blocks <code>Array.&lt;object&gt;</code> - blocks list
 - plugins [<code>Plugins</code>](#Plugins)
-- [context] <code>Object</code>
+- [context] <code>object</code>
 
 {% raw %}<div id="BuildRouter">&nbsp;</div>{% endraw %}
 
@@ -137,7 +117,7 @@ Loads conversation configuration
     * [new BuildRouter(block, plugins, context, [request])](#new_BuildRouter_new)
     * _instance_
         * [.keepConfigFor](#BuildRouter_keepConfigFor)
-        * [.loadBot()](#BuildRouter_loadBot) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.loadBot()](#BuildRouter_loadBot) ⇒ <code>Promise.&lt;object&gt;</code>
     * _static_
         * [.fromData(blocks, plugins, [context])](#BuildRouter_fromData)
 
@@ -153,31 +133,29 @@ Create new router from configuration
 
 **Params**
 
-- block <code>Object</code>
+- block <code>object</code>
     - [.botId] <code>string</code> - the ID of bot
     - [.snapshot] <code>string</code> - snapshot stage of bot
     - [.token] <code>string</code> | <code>Promise.&lt;string&gt;</code> - authorization token for bot
-    - [.routes] <code>Object</code> - list of routes for direct bot build
     - [.url] <code>string</code> - specify alternative configuration resource
 - plugins [<code>Plugins</code>](#Plugins) - custom code blocks resource
-- context <code>Object</code> - the building context
-    - [.linksTranslator] <code>Object</code> - function, that translates links globally
+- context <code>object</code> - the building context
+    - [.linksTranslator] <code>object</code> - function, that translates links globally
     - [.configStorage] [<code>ConfigStorage</code>](#ConfigStorage) - function, that translates links globally
     - [.allowForbiddenSnippetWords] <code>boolean</code> - disable security rule
 - [request] <code>function</code> - the building context
 
 **Example**  
 ```javascript
-// usage under serverless environment
+// usage of plugins
 
-const { Settings, BuildRouter, Blocks } = require('wingbot');
-const { createHandler, createProcessor } = require(''wingbot/serverlessAWS');
+const { BuildRouter, Plugins } = require('wingbot');
 const dynamoDb = require('./lib/dynamodb');
 const config = require('./config');
 
-const blocks = new Blocks();
+const plugins = new Plugins();
 
-blocks.code('exampleBlock', async (req, res, postBack, context, params) => {
+plugins.register('exampleBlock', async (req, res, postBack) => {
     await res.run('responseBlockName');
 });
 
@@ -185,27 +163,9 @@ const bot = new BuildRouter({
     botId: 'b7a71c27-c295-4ab0-b64e-6835b50a0db0',
     snapshot: 'master',
     token: 'adjsadlkadjj92n9u9'
-}, blocks);
+}, plugins);
 
-const processor = createProcessor(bot, {
-    appUrl: config.pageUrl,
-    pageToken: config.facebook.pageToken,
-    appSecret: config.facebook.appSecret,
-    autoTyping: true,
-    dynamo: {
-        db: dynamoDb,
-        tablePrefix: `${config.prefix}-`
-    }
-});
-
-const settings = new Settings(config.facebook.pageToken, log);
-
-if (config.isProduction) {
-    settings.getStartedButton('/start');
-    settings.whitelistDomain(config.pageUrl);
-}
-
-module.exports.handleRequest = createHandler(processor, config.facebook.botToken);
+module.exports = bot;
 ```
 {% raw %}<div id="BuildRouter_keepConfigFor">&nbsp;</div>{% endraw %}
 
@@ -221,7 +181,7 @@ Timeout, when the router is not checking for new configuration
 
 {% raw %}<div id="BuildRouter_loadBot">&nbsp;</div>{% endraw %}
 
-### buildRouter.loadBot() ⇒ <code>Promise.&lt;Object&gt;</code>
+### buildRouter.loadBot() ⇒ <code>Promise.&lt;object&gt;</code>
 Loads conversation configuration
 
 **Kind**: instance method of [<code>BuildRouter</code>](#BuildRouter)  
@@ -231,9 +191,9 @@ Loads conversation configuration
 **Kind**: static method of [<code>BuildRouter</code>](#BuildRouter)  
 **Params**
 
-- blocks <code>Array.&lt;Object&gt;</code> - blocks list
+- blocks <code>Array.&lt;object&gt;</code> - blocks list
 - plugins [<code>Plugins</code>](#Plugins)
-- [context] <code>Object</code>
+- [context] <code>object</code>
 
 {% raw %}<div id="Plugins">&nbsp;</div>{% endraw %}
 
@@ -270,7 +230,7 @@ Register plugin factory
 
 {% raw %}<div id="ConfigStorage">&nbsp;</div>{% endraw %}
 
-## ConfigStorage : <code>Object</code>
+## ConfigStorage : <code>object</code>
 **Kind**: global typedef  
 **Properties**
 
@@ -291,5 +251,5 @@ Register plugin factory
 - res <code>Responder</code>
 - [postBack] <code>function</code>
 - [context] <code>Object</code>
-- [paramsData] <code>Object</code>
+- [paramsData] <code>object</code>
 

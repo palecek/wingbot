@@ -9,7 +9,9 @@
 ## Typedefs
 
 <dl>
-<dt><a href="#SenderMeta">SenderMeta</a> : <code>Object</code></dt>
+<dt><a href="#QuickReply">QuickReply</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#SenderMeta">SenderMeta</a> : <code>object</code></dt>
 <dd></dd>
 </dl>
 
@@ -25,23 +27,30 @@ Instance of responder is passed as second parameter of handler (res)
     * [.finalMessageSent](#Responder_finalMessageSent)
     * [.startedOutput](#Responder_startedOutput)
     * [.senderMeta](#Responder_senderMeta) ⇒ [<code>SenderMeta</code>](#SenderMeta)
-    * [.data](#Responder_data) : <code>Object</code>
+    * [.data](#Responder_data) : <code>object</code>
     * [.run(blockName)](#Responder_run) ⇒ <code>Promise</code>
-    * [.setBookmark([action], [winningIntent])](#Responder_setBookmark) ⇒ <code>this</code>
-    * [.bookmark()](#Responder_bookmark) ⇒ <code>string</code> \| <code>null</code>
-    * [.runBookmark(postBack, [data])](#Responder_runBookmark) ⇒ <code>Promise.&lt;(null\|boolean)&gt;</code>
-    * [.setMessgingType(messagingType, [tag])](#Responder_setMessgingType) ⇒ <code>this</code>
+    * [.setNotificationRecipient(recipient)](#Responder_setNotificationRecipient)
+    * [.doNotLogTheEvent()](#Responder_doNotLogTheEvent) ⇒ <code>this</code>
+    * ~~[.setBookmark([action], [winningIntent])](#Responder_setBookmark) ⇒ <code>this</code>~~
+    * ~~[.bookmark()](#Responder_bookmark) ⇒ <code>string</code> \| <code>null</code>~~
+    * ~~[.runBookmark(postBack, [data])](#Responder_runBookmark) ⇒ <code>Promise.&lt;(null\|boolean)&gt;</code>~~
+    * [.setMessagingType(messagingType, [tag])](#Responder_setMessagingType) ⇒ <code>this</code>
+    * [.setPersona(personaId)](#Responder_setPersona) ⇒ <code>this</code>
     * [.isResponseType()](#Responder_isResponseType) ⇒ <code>boolean</code>
     * [.setData(data)](#Responder_setData) ⇒ <code>this</code>
-    * [.text(text, [...quickReplies])](#Responder_text) ⇒ <code>this</code>
+    * [.text(text, [replies])](#Responder_text) ⇒ <code>this</code>
     * [.setState(object)](#Responder_setState) ⇒ <code>this</code>
     * [.addQuickReply(action, [title], [data], [prepend], [justToExisting])](#Responder_addQuickReply)
+    * [.keepPreviousContext(req, [justOnce], [includeKeywords])](#Responder_keepPreviousContext) ⇒ <code>this</code>
+    * [.expectedIntent(intents, action, data, setState)](#Responder_expectedIntent)
     * [.expected(action, data)](#Responder_expected) ⇒ <code>this</code>
+    * [.expectedConfidentInput()](#Responder_expectedConfidentInput) ⇒ <code>this</code>
     * [.toAbsoluteAction(action)](#Responder_toAbsoluteAction) ⇒ <code>string</code>
     * [.currentAction()](#Responder_currentAction) ⇒ <code>string</code>
     * [.image(imageUrl, [reusable])](#Responder_image) ⇒ <code>this</code>
     * [.video(videoUrl, [reusable])](#Responder_video) ⇒ <code>this</code>
     * [.file(fileUrl, [reusable])](#Responder_file) ⇒ <code>this</code>
+    * [.oneTimeNotificationRequest(title, action, [tag], [data])](#Responder_oneTimeNotificationRequest) ⇒ <code>this</code>
     * [.wait([ms])](#Responder_wait) ⇒ <code>this</code>
     * [.typingOn()](#Responder_typingOn) ⇒ <code>this</code>
     * [.typingOff()](#Responder_typingOff) ⇒ <code>this</code>
@@ -68,7 +77,7 @@ into the conversation state.
 
 | Type |
 | --- |
-| <code>Object</code> | 
+| <code>object</code> | 
 
 {% raw %}<div id="Responder_finalMessageSent">&nbsp;</div>{% endraw %}
 
@@ -102,7 +111,7 @@ Response has been marked with a flag
 **Kind**: instance property of [<code>Responder</code>](#Responder)  
 {% raw %}<div id="Responder_data">&nbsp;</div>{% endraw %}
 
-### responder.data : <code>Object</code>
+### responder.data : <code>object</code>
 **Kind**: instance property of [<code>Responder</code>](#Responder)  
 {% raw %}<div id="Responder_run">&nbsp;</div>{% endraw %}
 
@@ -120,16 +129,35 @@ Run a code block defined by a plugin
 | --- |
 | <code>function</code> | 
 
+{% raw %}<div id="Responder_setNotificationRecipient">&nbsp;</div>{% endraw %}
+
+### responder.setNotificationRecipient(recipient)
+Replaces recipient and disables autotyping
+Usefull for sending a one-time notification
+
+**Kind**: instance method of [<code>Responder</code>](#Responder)  
+**Params**
+
+- recipient <code>object</code>
+
+{% raw %}<div id="Responder_doNotLogTheEvent">&nbsp;</div>{% endraw %}
+
+### responder.doNotLogTheEvent() ⇒ <code>this</code>
+Disables logging the event to history
+
+**Kind**: instance method of [<code>Responder</code>](#Responder)  
 {% raw %}<div id="Responder_setBookmark">&nbsp;</div>{% endraw %}
 
-### responder.setBookmark([action], [winningIntent]) ⇒ <code>this</code>
+### ~~responder.setBookmark([action], [winningIntent]) ⇒ <code>this</code>~~
+***Deprecated***
+
 Stores current action to be able to all it again
 
 **Kind**: instance method of [<code>Responder</code>](#Responder)  
 **Params**
 
 - [action] <code>string</code>
-- [winningIntent] <code>Object</code> <code> = </code>
+- [winningIntent] <code>object</code> <code> = </code>
 
 **Example**  
 ```javascript
@@ -146,18 +174,22 @@ bot.use(['action-name', /keyword/], (req, res) => {
 ```
 {% raw %}<div id="Responder_bookmark">&nbsp;</div>{% endraw %}
 
-### responder.bookmark() ⇒ <code>string</code> \| <code>null</code>
+### ~~responder.bookmark() ⇒ <code>string</code> \| <code>null</code>~~
+***Deprecated***
+
 Returns the action of bookmark
 
 **Kind**: instance method of [<code>Responder</code>](#Responder)  
 {% raw %}<div id="Responder_runBookmark">&nbsp;</div>{% endraw %}
 
-### responder.runBookmark(postBack, [data]) ⇒ <code>Promise.&lt;(null\|boolean)&gt;</code>
+### ~~responder.runBookmark(postBack, [data]) ⇒ <code>Promise.&lt;(null\|boolean)&gt;</code>~~
+***Deprecated***
+
 **Kind**: instance method of [<code>Responder</code>](#Responder)  
 **Params**
 
 - postBack <code>function</code> - the postback func
-- [data] <code>Object</code> - data for bookmark action
+- [data] <code>object</code> - data for bookmark action
 
 **Example**  
 ```javascript
@@ -180,14 +212,24 @@ bot.use('onName', (req, res, postBack) => {
     res.text(`Your name is: ${res.text()}`);
 })
 ```
-{% raw %}<div id="Responder_setMessgingType">&nbsp;</div>{% endraw %}
+{% raw %}<div id="Responder_setMessagingType">&nbsp;</div>{% endraw %}
 
-### responder.setMessgingType(messagingType, [tag]) ⇒ <code>this</code>
+### responder.setMessagingType(messagingType, [tag]) ⇒ <code>this</code>
 **Kind**: instance method of [<code>Responder</code>](#Responder)  
 **Params**
 
 - messagingType <code>string</code>
 - [tag] <code>string</code> <code> = null</code>
+
+{% raw %}<div id="Responder_setPersona">&nbsp;</div>{% endraw %}
+
+### responder.setPersona(personaId) ⇒ <code>this</code>
+Tets the persona for following requests
+
+**Kind**: instance method of [<code>Responder</code>](#Responder)  
+**Params**
+
+- personaId <code>object</code> | <code>string</code> | <code>null</code> <code> = </code>
 
 {% raw %}<div id="Responder_isResponseType">&nbsp;</div>{% endraw %}
 
@@ -203,7 +245,7 @@ Set temporary data to responder, which are persisted through single event
 **Kind**: instance method of [<code>Responder</code>](#Responder)  
 **Params**
 
-- data <code>Object</code>
+- data <code>object</code>
 
 **Example**  
 ```javascript
@@ -218,31 +260,32 @@ bot.use('bar', (req, res) => {
 ```
 {% raw %}<div id="Responder_text">&nbsp;</div>{% endraw %}
 
-### responder.text(text, [...quickReplies]) ⇒ <code>this</code>
+### responder.text(text, [replies]) ⇒ <code>this</code>
 Send text as a response
 
 **Kind**: instance method of [<code>Responder</code>](#Responder)  
 **Params**
 
 - text <code>string</code> - text to send to user, can contain placeholders (%s)
-- [...quickReplies] <code>...Object.&lt;string, string&gt;</code> | <code>Array.&lt;Object&gt;</code> - quick replies object
+- [replies] <code>object.&lt;string, (string\|QuickReply)&gt;</code> | [<code>Array.&lt;QuickReply&gt;</code>](#QuickReply) <code> = </code> - quick replies
 
 **Example**  
 ```javascript
 // simply
-res.text('Hello %s', name, {
+res.text('Hello', {
     action: 'Quick reply',
     another: 'Another quick reply'
 });
 
 // complex
-res.text('Hello %s', name, [
+res.text('Hello', [
     { action: 'action', title: 'Quick reply' },
     {
         action: 'complexAction', // required
         title: 'Another quick reply', // required
-        match: 'string' || /regexp/, // optional
-        someData: 'Will be included in payload data' // optional
+        setState: { prop: 'value' }, // optional
+        match: 'text' || /regexp/ || ['intent'], // optional
+        data:  { foo: 1  }'Will be included in payload data' // optional
     }
 ]);
 ```
@@ -254,7 +297,7 @@ Sets new attributes to state (with Object.assign())
 **Kind**: instance method of [<code>Responder</code>](#Responder)  
 **Params**
 
-- object <code>Object</code>
+- object <code>object</code>
 
 **Example**  
 ```javascript
@@ -268,9 +311,9 @@ Appends quick reply, to be sent with following text method
 **Kind**: instance method of [<code>Responder</code>](#Responder)  
 **Params**
 
-- action <code>string</code> | <code>Object</code> - relative or absolute action
+- action <code>string</code> | <code>object</code> - relative or absolute action
 - [title] <code>string</code> - quick reply title
-- [data] <code>Object</code> - additional data
+- [data] <code>object</code> - additional data
 - [prepend] <code>boolean</code> <code> = false</code> - set true to add reply at the beginning
 - [justToExisting] <code>boolean</code> <code> = false</code> - add quick reply only to existing replies
 
@@ -286,6 +329,45 @@ bot.use((req, res) => {
     }); // will be merged and sent with previously added quick replies
 });
 ```
+{% raw %}<div id="Responder_keepPreviousContext">&nbsp;</div>{% endraw %}
+
+### responder.keepPreviousContext(req, [justOnce], [includeKeywords]) ⇒ <code>this</code>
+To be able to keep context of previous interaction (expected action and intents)
+Just use this method to let user to answer again.
+
+**Kind**: instance method of [<code>Responder</code>](#Responder)  
+**Params**
+
+- req <code>Request</code>
+- [justOnce] <code>boolean</code> <code> = false</code> - don't do it again
+- [includeKeywords] <code>boolean</code> <code> = false</code> - keep intents from quick replies
+
+**Example**  
+```javascript
+bot.use('start', (req, res) => {
+    res.text('What color do you like?', [
+        { match: ['@Color=red'], text: 'red', action: 'red' },
+        { match: ['@Color=blue'], text: 'blue', action: 'blue' }
+    ]);
+    res.expected('need-color')
+});
+
+bot.use('need-color', (req, res) => {
+    res.keepPreviousContext(req);
+    res.text('Sorry, only red or blue.');
+});
+```
+{% raw %}<div id="Responder_expectedIntent">&nbsp;</div>{% endraw %}
+
+### responder.expectedIntent(intents, action, data, setState)
+**Kind**: instance method of [<code>Responder</code>](#Responder)  
+**Params**
+
+- intents <code>string</code> | <code>Array.&lt;string&gt;</code>
+- action <code>string</code>
+- data <code>object</code>
+- setState <code>object</code> <code> = </code>
+
 {% raw %}<div id="Responder_expected">&nbsp;</div>{% endraw %}
 
 ### responder.expected(action, data) ⇒ <code>this</code>
@@ -295,8 +377,45 @@ When user writes some text as reply, it will be processed as action
 **Params**
 
 - action <code>string</code> - desired action
-- data <code>Object</code> - desired action data
+- data <code>object</code> - desired action data
 
+{% raw %}<div id="Responder_expectedConfidentInput">&nbsp;</div>{% endraw %}
+
+### responder.expectedConfidentInput() ⇒ <code>this</code>
+Makes a following user input anonymized
+
+- disables processing of it with NLP
+- replaces text content of incomming request before
+  storing it at ChatLogStorage using a `confidentInputFilter`
+- `req.isConfidentInput()` will return true
+
+After processing the user input, next requests will be processed as usual,
+
+**Kind**: instance method of [<code>Responder</code>](#Responder)  
+**Example**  
+```javascript
+const { Router } = require('wingbot');
+
+const bot = new Router();
+
+bot.use('start', (req, res) => {
+    // evil question
+    res.text('Give me your CARD NUMBER :D')
+        .expected('received-card-number')
+        .expectedConfidentInput();
+});
+
+bot.use('received-card-number', (req, res) => {
+    const cardNumber = req.text();
+
+    // raw card number
+
+    req.isConfidentInput(); // true
+
+    res.text('got it')
+        .setState({ cardNumber });
+});
+```
 {% raw %}<div id="Responder_toAbsoluteAction">&nbsp;</div>{% endraw %}
 
 ### responder.toAbsoluteAction(action) ⇒ <code>string</code>
@@ -371,6 +490,21 @@ res.file('/img/foo.pdf');
 // file at url
 res.file('https://google.com/img/foo.pdf');
 ```
+{% raw %}<div id="Responder_oneTimeNotificationRequest">&nbsp;</div>{% endraw %}
+
+### responder.oneTimeNotificationRequest(title, action, [tag], [data]) ⇒ <code>this</code>
+One-time Notification request
+
+use tag to be able to use the specific token with a specific campaign
+
+**Kind**: instance method of [<code>Responder</code>](#Responder)  
+**Params**
+
+- title <code>string</code> - propmt text
+- action <code>string</code> - target action, when user subscribes
+- [tag] <code>string</code> <code> = null</code> - subscribtion tag, which will be matched against a campaign
+- [data] <code>object</code>
+
 {% raw %}<div id="Responder_wait">&nbsp;</div>{% endraw %}
 
 ### responder.wait([ms]) ⇒ <code>this</code>
@@ -408,7 +542,7 @@ Pass thread to another app
 **Params**
 
 - targetAppId <code>string</code>
-- [data] <code>string</code> | <code>Object</code> <code> = null</code>
+- [data] <code>string</code> | <code>object</code> <code> = null</code>
 
 {% raw %}<div id="Responder_requestThread">&nbsp;</div>{% endraw %}
 
@@ -418,7 +552,7 @@ Request thread from Primary Receiver app
 **Kind**: instance method of [<code>Responder</code>](#Responder)  
 **Params**
 
-- [data] <code>string</code> | <code>Object</code> <code> = null</code>
+- [data] <code>string</code> | <code>object</code> <code> = null</code>
 
 {% raw %}<div id="Responder_takeThead">&nbsp;</div>{% endraw %}
 
@@ -428,7 +562,7 @@ Take thread from another app
 **Kind**: instance method of [<code>Responder</code>](#Responder)  
 **Params**
 
-- [data] <code>string</code> | <code>Object</code> <code> = null</code>
+- [data] <code>string</code> | <code>object</code> <code> = null</code>
 
 {% raw %}<div id="Responder_receipt">&nbsp;</div>{% endraw %}
 
@@ -523,7 +657,7 @@ Override action tracking
 **Kind**: instance method of [<code>Responder</code>](#Responder)  
 **Params**
 
-- action <code>string</code> | <code>boolean</code>
+- action <code>string</code> | <code>boolean</code> - use false to not emit analytics events
 
 {% raw %}<div id="Responder_trackAsSkill">&nbsp;</div>{% endraw %}
 
@@ -535,9 +669,23 @@ Set skill for tracking (will used untill it will be changed)
 
 - skill <code>string</code> | <code>null</code>
 
+{% raw %}<div id="QuickReply">&nbsp;</div>{% endraw %}
+
+## QuickReply : <code>object</code>
+**Kind**: global typedef  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| title | <code>string</code> | 
+| [action] | <code>string</code> | 
+| [data] | <code>object</code> | 
+| [setState] | <code>object</code> | 
+| [match] | <code>RegExp</code> \| <code>string</code> \| <code>Array.&lt;string&gt;</code> | 
+
 {% raw %}<div id="SenderMeta">&nbsp;</div>{% endraw %}
 
-## SenderMeta : <code>Object</code>
+## SenderMeta : <code>object</code>
 **Kind**: global typedef  
 **Properties**
 
